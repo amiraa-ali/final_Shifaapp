@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/auth/doctor_guard.dart';
-import 'package:shifa/auth/welcome.dart';
 import 'appointment_screen.dart';
 import 'doctor_profile.dart';
 import 'package:shifa/services/firebase_services.dart';
+import 'welcome.dart';
+import 'doctor_guard.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   final String doctorName;

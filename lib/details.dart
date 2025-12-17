@@ -17,9 +17,7 @@ class DoctorDetailsPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Details",
@@ -35,12 +33,10 @@ class DoctorDetailsPage extends StatelessWidget {
           ),
         ),
       ),
-
       body: Column(
         children: [
           const SizedBox(height: 20),
 
-          // ================= DOCTOR NAME =================
           Text(
             doctor.name,
             style: const TextStyle(
@@ -54,7 +50,6 @@ class DoctorDetailsPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // ================= PRICE CARD =================
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(16),
@@ -85,77 +80,8 @@ class DoctorDetailsPage extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const Spacer(),
 
-          // ================= BODY =================
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  // ========== ABOUT ME CARD ==========
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 15),
-                    decoration: BoxDecoration(
-                      color: const Color(0xfff8f7fb),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "About me",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          "${doctor.name} is the top most immunologists specialist. "
-                          "He achieved several awards for wonderful contribution "
-                          "in medical field and is available for private consultation.",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ========== WORKING TIME CARD ==========
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 40),
-                    decoration: BoxDecoration(
-                      color: const Color(0xfff8f7fb),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Working Time",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          "Monday - Friday, 08:00 AM - 20:00 PM",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ================= BOOK BUTTON =================
           Padding(
             padding: const EdgeInsets.all(20),
             child: SizedBox(
@@ -174,13 +100,11 @@ class DoctorDetailsPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => BookAppointmentPage(
                         doctorId: doctor.id,
-                        doctorName: doctor.name, // Pass to booking page
-                        doctorSpecialty:
-                            doctor.specialty, // Pass to booking page
+                        doctorName: doctor.name,
+                        doctorSpecialty: doctor.specialty,
                         clinicLocation: doctor.location,
-                        serviceType:
-                            doctor.specialty, // Or another relevant field
-                        totalAmount: doctor.price.toString(),
+                        serviceType: doctor.specialty,
+                        totalAmount: "${doctor.price} EGP",
                       ),
                     ),
                   );

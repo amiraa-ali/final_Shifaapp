@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/auth/patient_login.dart';
+import 'patient_login.dart';
 
 class SetNewPasswordScreen extends StatefulWidget {
   const SetNewPasswordScreen({super.key});

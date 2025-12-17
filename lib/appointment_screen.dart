@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shifa/auth/doctor_guard.dart';
 import 'package:shifa/Services/firebase_services.dart';
+import 'doctor_chat_screen.dart';
+import 'doctor_guard.dart';
 
 class AppointmentsScreen extends StatelessWidget {
   const AppointmentsScreen({super.key});
@@ -16,7 +17,6 @@ class AppointmentsScreen extends StatelessWidget {
             title: const Text("Appointments"),
             backgroundColor: const Color(0xff009f93),
             bottom: const TabBar(
-              indicatorColor: Colors.white,
               tabs: [
                 Tab(text: "Pending"),
                 Tab(text: "Accepted"),
@@ -27,21 +27,17 @@ class AppointmentsScreen extends StatelessWidget {
           body: StreamBuilder<QuerySnapshot>(
             stream: FirebaseServices().getDoctorAppointments(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return const Center(child: Text("Something went wrong"));
               }
 
               final docs = snapshot.data!.docs;
 
               return TabBarView(
                 children: [
-                  _AppointmentsList(docs: docs, statusFilter: 'pending'),
-                  _AppointmentsList(docs: docs, statusFilter: 'accepted'),
-                  _AppointmentsList(docs: docs, statusFilter: 'completed'),
+                  _DoctorList(docs, 'pending'),
+                  _DoctorList(docs, 'accepted'),
+                  _DoctorList(docs, 'completed'),
                 ],
               );
             },
@@ -52,37 +48,32 @@ class AppointmentsScreen extends StatelessWidget {
   }
 }
 
-// ================= LIST PER TAB =================
-class _AppointmentsList extends StatelessWidget {
+class _DoctorList extends StatelessWidget {
   final List<QueryDocumentSnapshot> docs;
-  final String statusFilter;
+  final String status;
 
-  const _AppointmentsList({required this.docs, required this.statusFilter});
+  const _DoctorList(this.docs, this.status);
 
   @override
   Widget build(BuildContext context) {
-    final filtered = docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['status'] == statusFilter;
+    final filtered = docs.where((d) {
+      return (d.data() as Map<String, dynamic>)['status'] == status;
     }).toList();
 
     if (filtered.isEmpty) {
-      return const Center(
-        child: Text("No appointments", style: TextStyle(color: Colors.grey)),
-      );
+      return const Center(child: Text("No appointments"));
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final data = filtered[index].data() as Map<String, dynamic>;
-
-        return AppointmentCard(
-          appointmentId: filtered[index].id,
+      itemBuilder: (_, i) {
+        final data = filtered[i].data() as Map<String, dynamic>;
+        return DoctorAppointmentCard(
+          appointmentId: filtered[i].id,
           patientId: data['patientId'],
-          time: data['time'],
           date: (data['date'] as Timestamp).toDate(),
+          time: data['time'],
           status: data['status'],
         );
       },
@@ -90,20 +81,19 @@ class _AppointmentsList extends StatelessWidget {
   }
 }
 
-// ================= CARD =================
-class AppointmentCard extends StatelessWidget {
+class DoctorAppointmentCard extends StatelessWidget {
   final String appointmentId;
   final String patientId;
-  final String time;
   final DateTime date;
+  final String time;
   final String status;
 
-  const AppointmentCard({
+  const DoctorAppointmentCard({
     super.key,
     required this.appointmentId,
     required this.patientId,
-    required this.time,
     required this.date,
+    required this.time,
     required this.status,
   });
 
@@ -112,22 +102,17 @@ class AppointmentCard extends StatelessWidget {
     final firebase = FirebaseServices();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// Patient name
             FutureBuilder<Map<String, dynamic>?>(
               future: firebase.getPatientById(patientId),
-              builder: (context, snapshot) {
-                final patient = snapshot.data;
-                final name = patient?['fullName'] ?? 'Patient';
-
+              builder: (_, snap) {
                 return Text(
-                  name,
+                  snap.data?['fullName'] ?? 'Patient',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -135,8 +120,6 @@ class AppointmentCard extends StatelessWidget {
                 );
               },
             ),
-
-            const SizedBox(height: 6),
             Text("Date: ${date.day}/${date.month}/${date.year}"),
             Text("Time: $time"),
             Text("Status: $status"),
@@ -167,12 +150,30 @@ class AppointmentCard extends StatelessWidget {
               ),
 
             if (status == 'accepted')
-              ElevatedButton(
-                onPressed: () => firebase.updateAppointmentStatus(
-                  appointmentId: appointmentId,
-                  status: 'completed',
-                ),
-                child: const Text("Mark Completed"),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.chat),
+                    label: const Text("Chat"),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DoctorChatScreen(appointmentId: appointmentId),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => firebase.updateAppointmentStatus(
+                      appointmentId: appointmentId,
+                      status: 'completed',
+                    ),
+                    child: const Text("Complete"),
+                  ),
+                ],
               ),
           ],
         ),

@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
-import 'package:shifa/auth/doctor_signup.dart';
 import 'package:shifa/doctor_home_screen.dart';
 import '../forget_password.dart';
+import 'welcome.dart';
+import 'doctor_signup.dart';
 
 class DoctorLogin extends StatefulWidget {
   const DoctorLogin({super.key});

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'Details.dart';
 
 class Doctor {
+  final String id;
   final String name;
   final String specialty;
   final double rating;
@@ -12,6 +13,7 @@ class Doctor {
   final double price;
 
   Doctor({
+    required this.id,
     required this.name,
     required this.specialty,
     required this.rating,
@@ -27,6 +29,7 @@ class Doctor {
 // --------------------------------------------
 final List<Doctor> doctors = [
   Doctor(
+    id: 'doc1',
     name: 'Dr. Amira Ali',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -36,6 +39,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc2',
     name: 'Dr. Shorouk Abdelaleem',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -45,6 +49,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc3',
     name: 'Dr. Wafaa Hamada',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -54,6 +59,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc4',
     name: 'Dr. Doha Ahmed',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -63,6 +69,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc5',
     name: 'Dr. Zeyad Hassanien',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -72,6 +79,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc6',
     name: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -81,6 +89,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc7',
     name: 'Dr. Natalie Cooper',
     specialty: 'Cardiology',
     rating: 4.9,
@@ -92,6 +101,7 @@ final List<Doctor> doctors = [
 
   // Dermatology
   Doctor(
+    id: 'doc8',
     name: 'Dr. William Archer',
     specialty: 'Dermatology',
     rating: 4.9,
@@ -101,6 +111,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc9',
     name: 'Dr. Harper Lawson',
     specialty: 'Dermatology',
     rating: 4.8,
@@ -110,6 +121,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc10',
     name: 'Dr. Benjamin Cole',
     specialty: 'Dermatology',
     rating: 4.7,
@@ -119,6 +131,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc11',
     name: 'Dr. Grace Mitchell',
     specialty: 'Dermatology',
     rating: 4.7,
@@ -128,6 +141,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc12',
     name: 'Dr. Samuel Foster',
     specialty: 'Dermatology',
     rating: 4.7,
@@ -139,6 +153,7 @@ final List<Doctor> doctors = [
 
   // Neurology
   Doctor(
+    id: 'doc13',
     name: 'Dr. Lily Anderson',
     specialty: 'Neurology',
     rating: 4.7,
@@ -148,6 +163,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc14',
     name: 'Dr. Noah Patterson',
     specialty: 'Neurology',
     rating: 4.7,
@@ -157,6 +173,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc15',
     name: 'Dr. Emma Collins',
     specialty: 'Neurology',
     rating: 4.7,
@@ -166,6 +183,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc16',
     name: 'Dr. Henry Phillips',
     specialty: 'Neurology',
     rating: 4.7,
@@ -175,6 +193,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc17',
     name: 'Dr. Ava Thompson',
     specialty: 'Neurology',
     rating: 4.7,
@@ -184,6 +203,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc18',
     name: 'Dr. Oliver Hayes',
     specialty: 'Neurology',
     rating: 4.7,
@@ -193,6 +213,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc19',
     name: 'Dr. Hannah Morgan',
     specialty: 'Neurology',
     rating: 4.7,
@@ -204,6 +225,7 @@ final List<Doctor> doctors = [
 
   // Pediatrics
   Doctor(
+    id: 'doc20',
     name: 'Dr. Madeline Ross',
     specialty: 'Pediatrics',
     rating: 4.7,
@@ -213,6 +235,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc21',
     name: 'Dr. Adrian Blake',
     specialty: 'Pediatrics',
     rating: 4.7,
@@ -222,6 +245,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc22',
     name: 'Dr. Stella Hughes',
     specialty: 'Pediatrics',
     rating: 4.7,
@@ -231,6 +255,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc23',
     name: 'Dr. Carter Reynolds',
     specialty: 'Pediatrics',
     rating: 4.7,
@@ -242,6 +267,7 @@ final List<Doctor> doctors = [
 
   // Orthopedics
   Doctor(
+    id: 'doc24',
     name: 'Dr. Isabella Monroe',
     specialty: 'Orthopedics',
     rating: 4.7,
@@ -251,6 +277,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc25',
     name: 'Dr. Felix Grant',
     specialty: 'Orthopedics',
     rating: 4.7,
@@ -260,6 +287,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc26',
     name: 'Dr. Zoe Parker',
     specialty: 'Orthopedics',
     rating: 4.7,
@@ -269,6 +297,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc27',
     name: 'Dr. Miles Donovan',
     specialty: 'Orthopedics',
     rating: 4.7,
@@ -278,6 +307,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc28',
     name: 'Dr. Evelyn Hart',
     specialty: 'Orthopedics',
     rating: 4.7,
@@ -287,6 +317,7 @@ final List<Doctor> doctors = [
     price: 200,
   ),
   Doctor(
+    id: 'doc29',
     name: 'Dr. Julian Cross',
     specialty: 'Orthopedics',
     rating: 4.7,

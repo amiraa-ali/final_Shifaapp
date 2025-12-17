@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'homepage.dart';
+import 'patient_home_screen.dart';
 
-class ChatScreen extends StatelessWidget {
+class PatientChatScreen extends StatelessWidget {
   final String doctorName;
   final String specialty;
+  final String? doctorImageUrl;
+  final String? appointmentId;
   // يمكنك إضافة مسار صورة الطبيب هنا إذا أردت عرضها
 
-  const ChatScreen({
+  const PatientChatScreen({
     super.key,
     this.doctorName = 'Dr. Sarah Johnson', // قيمة افتراضية
     this.specialty = 'Cardiologist', // قيمة افتراضية
+    this.doctorImageUrl,
+    this.appointmentId,
   });
 
   @override

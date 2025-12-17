@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/auth/doctor_login.dart';
-import 'package:shifa/auth/patient_login.dart';
+import 'doctor_login.dart';
+import 'patient_login.dart';
 
 void main() {
   runApp(

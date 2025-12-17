@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/auth/patient_guard.dart';
 import 'package:shifa/patient_appointment_screen.dart';
 import 'package:shifa/services/firebase_services.dart';
 import 'categories.dart' as cat;
 import 'package:shifa/profile.dart';
 import 'doctor_page.dart';
 import 'package:shifa/setting_page.dart';
-import 'package:shifa/auth/welcome.dart';
 import 'doctor_card.dart';
 import 'patient_chat_screen.dart';
-import 'patient_appointment_screen.dart';
+import 'welcome.dart';
+import 'patient_guard.dart';
 
 // ================= MODEL =================
 class Category {
@@ -78,7 +77,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   // 🔑 Bottom Nav Pages
   final List<Widget> pages = [
     const SizedBox.shrink(),
-    ChatScreen(),
+    PatientChatScreen(),
     PatientAppointmentsScreen(),
     ProfilePage(),
   ];

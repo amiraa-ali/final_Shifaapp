@@ -1,62 +1,59 @@
 import 'package:flutter/material.dart';
-import 'doctor_home_screen.dart';
+import 'package:shifa/services/firebase_services.dart';
 
-class DoctorChatScreen extends StatelessWidget {
-  const DoctorChatScreen({super.key});
+class DoctorChatScreen extends StatefulWidget {
+  final String appointmentId;
+
+  const DoctorChatScreen({super.key, required this.appointmentId});
+
+  @override
+  State<DoctorChatScreen> createState() => _DoctorChatScreenState();
+}
+
+class _DoctorChatScreenState extends State<DoctorChatScreen> {
+  final FirebaseServices _firebase = FirebaseServices();
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.teal,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
-            );
-          },
-        ),
-        title: const Text(
-          "Chats",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Chat"),
+        backgroundColor: const Color(0xff009f93),
       ),
-
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          ChatTile(name: "Ahmed Ali", message: "Doctor, I need help with pain"),
-          ChatTile(name: "Mohamed Samir", message: "When is my appointment?"),
-          ChatTile(name: "Sara Hassan", message: "Thank you doctor ❤️"),
+      body: Column(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: const InputDecoration(
+                        hintText: "Type a message...",
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Color(0xff009f93)),
+                    onPressed: () async {
+                      if (_controller.text.trim().isEmpty) return;
+                      _controller.clear();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class ChatTile extends StatelessWidget {
-  final String name;
-  final String message;
-
-  const ChatTile({super.key, required this.name, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const CircleAvatar(
-          radius: 24,
-          backgroundColor: Colors.teal,
-          child: Icon(Icons.person, color: Colors.white),
-        ),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(message),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {},
       ),
     );
   }

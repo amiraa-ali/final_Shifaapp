@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
-import 'auth/welcome.dart';
+import 'welcome.dart';
 
 class SettingsPage extends StatelessWidget {
   SettingsPage({super.key});

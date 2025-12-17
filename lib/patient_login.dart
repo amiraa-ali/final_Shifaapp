@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'pateint_signup.dart';
 import '../forget_password.dart';
-import 'package:shifa/homepage.dart';
+import 'package:shifa/patient_home_screen.dart';
 
 class PatientLogin extends StatefulWidget {
   const PatientLogin({super.key});
