@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "14990694374",
+    "project_id": "shifaapp-f9163",
+    "storage_bucket": "shifaapp-f9163.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:14990694374:android:a367b75be07a1aa58a2827",
+        "android_client_info": {
+          "package_name": "com.example.shifa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAbGd0lbAZQoN_4wUFWoAdHmCkhlvKnpI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
