@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'details.dart';
 
 /// ======================
-/// DETAILS SCREEN (الصغيرة)
+/// DOCTOR CARD WITH FIREBASE SUPPORT
 /// ======================
-class DoctorDetailsScreen extends StatelessWidget {
-  final String doctorName;
+class DoctorCard extends StatelessWidget {
+  final String doctorId; // Firebase document ID
+  final String name;
   final String specialty;
   final double rating;
   final int yearsExp;
@@ -13,64 +15,9 @@ class DoctorDetailsScreen extends StatelessWidget {
   final String imagePath;
   final double price;
 
-  const DoctorDetailsScreen({
-    super.key,
-    required this.doctorName,
-    required this.specialty,
-    required this.rating,
-    required this.yearsExp,
-    required this.location,
-    required this.distance,
-    required this.imagePath,
-    required this.price,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(doctorName)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              doctorName,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            Text(specialty, style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 20),
-
-            Text(
-              "Consultation Price: $price EGP",
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ======================
-/// DOCTOR CARD
-/// ======================
-class DoctorCard extends StatelessWidget {
-  final String name;
-  final String specialty;
-  final double rating;
-  final int yearsExp;
-  final String location;
-  final double distance;
-  final String imagePath;
-  final double price; // 👈 السعر
-
   const DoctorCard({
     super.key,
+    required this.doctorId,
     required this.name,
     required this.specialty,
     required this.rating,
@@ -106,15 +53,12 @@ class DoctorCard extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => DoctorDetailsScreen(
+                  builder: (_) => DoctorDetailsPage(
+                    doctorId: doctorId,
                     doctorName: name,
                     specialty: specialty,
-                    rating: rating,
-                    yearsExp: yearsExp,
                     location: location,
-                    distance: distance,
-                    imagePath: imagePath,
-                    price: price, // 👈 مهم
+                    price: price,
                   ),
                 ),
               );
@@ -133,8 +77,11 @@ class DoctorCard extends StatelessWidget {
                     errorBuilder: (_, __, ___) => Container(
                       width: 80,
                       height: 100,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.person),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.person, size: 40),
                     ),
                   ),
                 ),
@@ -162,7 +109,7 @@ class DoctorCard extends StatelessWidget {
                         children: [
                           const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
-                          Text('$rating'),
+                          Text(rating.toStringAsFixed(1)),
                           const Text(' • '),
                           Text('$yearsExp years exp'),
                         ],
@@ -177,18 +124,23 @@ class DoctorCard extends StatelessWidget {
                             color: Colors.grey,
                           ),
                           const SizedBox(width: 4),
-                          Text('$location, ${distance.toStringAsFixed(1)} km'),
+                          Expanded(
+                            child: Text(
+                              '$location, ${distance.toStringAsFixed(1)} km',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
 
                       const SizedBox(height: 6),
 
-                      // 👇 السعر في الكارت
                       Text(
-                        "$price EGP",
+                        "${price.toStringAsFixed(0)} EGP",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.green,
+                          fontSize: 16,
                         ),
                       ),
                     ],
@@ -215,15 +167,12 @@ class DoctorCard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => DoctorDetailsScreen(
+                      builder: (_) => DoctorDetailsPage(
+                        doctorId: doctorId,
                         doctorName: name,
                         specialty: specialty,
-                        rating: rating,
-                        yearsExp: yearsExp,
                         location: location,
-                        distance: distance,
-                        imagePath: imagePath,
-                        price: price, // 👈 مهم جدًا
+                        price: price,
                       ),
                     ),
                   );

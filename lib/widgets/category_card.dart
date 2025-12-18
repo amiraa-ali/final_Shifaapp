@@ -16,57 +16,89 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final theme = Theme.of(context);
+
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 15),
-        width: 100, // تحديد عرض ثابت للعنصر
-        padding: const EdgeInsets.symmetric(vertical: 15),
+      borderRadius: BorderRadius.circular(18),
+      splashColor: theme.primaryColor.withOpacity(0.15),
+      highlightColor: Colors.transparent,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.only(right: 14),
+        width: 105,
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF1ABC9C).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+                color: theme.primaryColor.withOpacity(0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 3,
-              offset: const Offset(0, 2),
-            ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF1ABC9C)
-                    : Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.grey.shade600,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 5),
+            _IconBubble(icon: icon, isSelected: isSelected),
+            const SizedBox(height: 8),
             Text(
               title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? Colors.black87 : Colors.grey.shade600,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ================= ICON BUBBLE =================
+class _IconBubble extends StatelessWidget {
+  final IconData icon;
+  final bool isSelected;
+
+  const _IconBubble({required this.icon, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).primaryColor;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: isSelected
+            ? LinearGradient(
+                colors: [primary, primary.withOpacity(0.85)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isSelected ? null : Colors.grey.shade100,
+      ),
+      child: Icon(
+        icon,
+        size: 22,
+        color: isSelected ? Colors.white : Colors.grey.shade600,
       ),
     );
   }

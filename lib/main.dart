@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// import 'package:nav1/doctor_home_screen.dart';
+// import 'package:nav1/homepage.dart';
+import 'package:shifa/welcome.dart';
+// import 'homepage.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'welcome.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await Supabase.initialize(
-    url: 'https://your-supabase-url.supabase.co',
-    anonKey: 'your-an on-key',
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ShifaApp());
 }
 

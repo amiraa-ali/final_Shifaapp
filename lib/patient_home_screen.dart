@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/patient_appointment_screen.dart';
-import 'package:shifa/services/firebase_services.dart';
-import 'categories.dart' as cat;
-import 'package:shifa/profile.dart';
-import 'doctor_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shifa/categories_card.dart';
+import 'package:shifa/doctor_page.dart';
+import 'package:shifa/patient_profile.dart';
 import 'package:shifa/setting_page.dart';
-import 'doctor_card.dart';
-import 'patient_chat_screen.dart';
-import 'welcome.dart';
-import 'patient_guard.dart';
+import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/doctor_card.dart';
+import 'package:shifa/patient_chat_screen.dart';
 
-// ================= MODEL =================
+// Model
 class Category {
   final String title;
   final IconData icon;
@@ -26,41 +24,6 @@ final List<Category> categories = [
   Category('Dentistry', Icons.medical_services_outlined),
 ];
 
-// ================= FAKE DOCTORS (UI ONLY) =================
-final List<Map<String, dynamic>> doctorslist = [
-  {
-    'name': 'Dr. Sarah Johnson',
-    'specialty': 'Cardiologist',
-    'rating': 4.9,
-    'yearsExp': 12.0,
-    'location': 'City Hospital',
-    'distance': 2.5,
-    'imagePath': 'assets/images/doc1.png',
-    'price': 300.0,
-  },
-  {
-    'name': 'Dr. Michael Chen',
-    'specialty': 'Orthopedic Surgeon',
-    'rating': 4.8,
-    'yearsExp': 15.0,
-    'location': 'Memorial Clinic',
-    'distance': 1.8,
-    'imagePath': 'assets/images/doc2.png',
-    'price': 300.0,
-  },
-  {
-    'name': 'Dr. Emily Roberts',
-    'specialty': 'General Physician',
-    'rating': 4.7,
-    'yearsExp': 8.0,
-    'location': 'Health Center',
-    'distance': 3.1,
-    'imagePath': 'assets/images/doc3.png',
-    'price': 300.0,
-  },
-];
-
-// ================= PATIENT HOME =================
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
 
@@ -69,66 +32,87 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  final FirebaseServices _firebaseServices = FirebaseServices();
   int index = 0;
   int _categoryIndex = 0;
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // 🔑 Bottom Nav Pages
-  final List<Widget> pages = [
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final data = await _firebaseServices.getUserData();
+      setState(() {
+        userData = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  final pages = [
     const SizedBox.shrink(),
-    PatientChatScreen(),
-    PatientAppointmentsScreen(),
-    ProfilePage(),
+    const PatientChatScreen(),
+    const AllCategoriesPage(),
+    const PatientProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return PatientGuard(
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: Colors.grey[50],
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: Colors.grey[50],
 
-        drawer: _buildDrawer(),
+      drawer: _buildDrawer(),
 
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: index,
-          onDestinationSelected: (i) {
-            setState(() {
-              index = i;
-            });
-          },
-          height: 60,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home, color: Colors.teal),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.chat_outlined),
-              selectedIcon: Icon(Icons.chat, color: Colors.teal),
-              label: 'Chat',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.calendar_today_outlined),
-              selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
-              label: 'Bookings',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outlined),
-              selectedIcon: Icon(Icons.person, color: Colors.teal),
-              label: 'Profile',
-            ),
-          ],
-        ),
-
-        body: index == 0 ? _buildHomeUI() : pages[index],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (i) {
+          setState(() {
+            index = i;
+          });
+        },
+        height: 60,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, color: Colors.teal),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_outlined),
+            selectedIcon: Icon(Icons.chat, color: Colors.teal),
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
+            label: 'Bookings',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outlined),
+            selectedIcon: Icon(Icons.person, color: Colors.teal),
+            label: 'Profile',
+          ),
+        ],
       ),
+
+      body: index == 0 ? _buildHomeUI() : pages[index],
     );
   }
 
-  // ================= HOME UI =================
+  // HOME UI
   Widget _buildHomeUI() {
     return SingleChildScrollView(
       child: Column(
@@ -136,9 +120,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         children: [
           _buildHeaderAndCategories(),
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 80, 20, 10),
-            child: const Text(
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 80, 20, 10),
+            child: Text(
               'Available Doctors',
               style: TextStyle(
                 fontSize: 18,
@@ -148,17 +132,56 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
           ),
 
-          ...doctorslist.map(
-            (doc) => DoctorCard(
-              name: doc['name'],
-              specialty: doc['specialty'],
-              rating: (doc['rating'] as num).toDouble(),
-              yearsExp: (doc['yearsExp'] as num).toInt(),
-              location: doc['location'],
-              distance: (doc['distance'] as num).toDouble(),
-              imagePath: doc['imagePath'],
-              price: (doc['price'] as num).toDouble(),
-            ),
+          // Real-time doctors from Firebase
+          StreamBuilder<QuerySnapshot>(
+            stream: _firebaseServices.getTopRatedDoctors(limit: 5),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(color: Colors.teal),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text('Error: ${snapshot.error}'),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text('No doctors available'),
+                  ),
+                );
+              }
+
+              final doctors = snapshot.data!.docs;
+
+              return Column(
+                children: doctors.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return DoctorCard(
+                    doctorId: doc.id,
+                    name: data['name'] ?? 'Doctor',
+                    specialty: data['specialization'] ?? 'General',
+                    rating: (data['rating'] ?? 0.0).toDouble(),
+                    yearsExp: data['yearsExperience'] ?? 0,
+                    location: data['clinicLocation'] ?? 'Clinic',
+                    distance: 5.0, // Default distance
+                    imagePath: 'assets/images/doc1.png',
+                    price: (data['fees'] ?? 0.0).toDouble(),
+                  );
+                }).toList(),
+              );
+            },
           ),
 
           const SizedBox(height: 30),
@@ -167,8 +190,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
-  // ================= DRAWER =================
+  // DRAWER
   Widget _buildDrawer() {
+    String userName = userData?['name'] ?? 'User';
+    String userEmail = userData?['email'] ?? 'user@example.com';
+    String initials = userName.isNotEmpty
+        ? userName.split(' ').map((n) => n[0]).take(2).join().toUpperCase()
+        : 'U';
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -184,27 +213,27 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
-              children: const [
+              children: [
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
                   child: Text(
-                    'ZH',
-                    style: TextStyle(
+                    initials,
+                    style: const TextStyle(
                       color: Color(0xFF1ABC9C),
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                     ),
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Zeyad Hassanien',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  userName,
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 Text(
-                  'zeyad.hassanien@example.com',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  userEmail,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
@@ -212,7 +241,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
           ListTile(
             leading: const Icon(Icons.home_outlined, color: Color(0xFF1ABC9C)),
-            title: const Text('Home'),
+            title: const Text('Home (Patient)'),
             onTap: () => Navigator.pop(context),
           ),
 
@@ -227,7 +256,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => SettingsPage()),
+                MaterialPageRoute(builder: (context) => SettingsPage()),
               );
             },
           ),
@@ -236,12 +265,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text('Logout'),
             onTap: () async {
-              await FirebaseServices().logout();
-
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                (route) => false,
-              );
+              await _firebaseServices.logout();
+              if (!mounted) return;
+              Navigator.of(
+                context,
+              ).pushNamedAndRemoveUntil('/welcome', (route) => false);
             },
           ),
         ],
@@ -249,11 +277,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
-  // ================= HEADER + CATEGORIES =================
+  // HEADER + CATEGORIES
   Widget _buildHeaderAndCategories() {
+    String userName = userData?['name'] ?? 'User';
+    String initials = userName.isNotEmpty
+        ? userName.split(' ').map((n) => n[0]).take(2).join().toUpperCase()
+        : 'U';
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
+        // Header
         Container(
           padding: const EdgeInsets.fromLTRB(20, 40, 20, 150),
           decoration: const BoxDecoration(
@@ -265,15 +299,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text.rich(
                 TextSpan(
                   text: 'Welcome back,\n',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
                   children: [
                     TextSpan(
-                      text: 'Zeyad Hassanien',
-                      style: TextStyle(
+                      text: userName,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         fontSize: 22,
@@ -286,8 +320,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 radius: 20,
                 backgroundColor: Colors.white,
                 child: Text(
-                  'ZH',
-                  style: TextStyle(
+                  initials,
+                  style: const TextStyle(
                     color: Color(0xFF1ABC9C),
                     fontWeight: FontWeight.bold,
                   ),
@@ -297,7 +331,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
         ),
 
-        // MENU + SEARCH
+        // Search + Menu
         Positioned(
           top: 125,
           left: 20,
@@ -313,38 +347,50 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(15),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black12,
+                        color: Colors.black12.withOpacity(0.1),
                         blurRadius: 10,
-                        offset: Offset(0, 5),
+                        offset: const Offset(0, 5),
                       ),
                     ],
                   ),
                   child: Icon(Icons.menu, color: Colors.grey[800]),
                 ),
               ),
+
               Expanded(
-                child: Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Find your doctor or clinic...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      icon: Icon(Icons.search, color: Colors.grey),
-                      border: InputBorder.none,
+                child: GestureDetector(
+                  onTap: () {
+                    // Navigate to all doctors with search
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DoctorsPage()),
+                    );
+                  },
+                  child: Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.search, color: Colors.grey),
+                        SizedBox(width: 10),
+                        Text(
+                          'Find your doctor or clinic...',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -353,7 +399,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
         ),
 
-        // CATEGORIES
+        // Categories
         Positioned(
           top: 210,
           left: 0,
@@ -363,28 +409,28 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: categories.asMap().entries.map((entry) {
-                final i = entry.key;
-                final category = entry.value;
+                int i = entry.key;
+                Category category = entry.value;
 
                 return GestureDetector(
                   onTap: () {
-                    setState(() => _categoryIndex = i);
+                    setState(() {
+                      _categoryIndex = i;
+                    });
 
                     if (category.title.toLowerCase() == 'all') {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const cat.AllCategoriesPage(),
+                          builder: (_) => const AllCategoriesPage(),
                         ),
                       );
                     } else {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => DoctorsPage(
-                            categoryName: category.title,
-                            doctors: doctors,
-                          ),
+                          builder: (_) =>
+                              DoctorsPage(categoryName: category.title),
                         ),
                       );
                     }
@@ -398,11 +444,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     decoration: BoxDecoration(
                       color: _categoryIndex == i ? Colors.teal : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
+                          color: Colors.black12.withOpacity(0.1),
                           blurRadius: 10,
-                          offset: Offset(0, 5),
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),

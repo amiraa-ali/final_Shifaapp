@@ -1,192 +1,195 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shifa/Services/firebase_services.dart';
 import 'pateint_signup.dart';
-import '../forget_password.dart';
-import 'package:shifa/patient_home_screen.dart';
+import 'patient_home_screen.dart';
 
 class PatientLogin extends StatefulWidget {
   const PatientLogin({super.key});
 
   @override
-  State<PatientLogin> createState() => _PatientLoginState();
+  State<PatientLogin> createState() => _LoginPageState();
 }
 
-class _PatientLoginState extends State<PatientLogin> {
+class _LoginPageState extends State<PatientLogin> {
   final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  bool isVisible = false;
-
-  final FirebaseServices _firebaseServices = FirebaseServices();
-
+  bool isvisible = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const SizedBox(height: 40),
-
-            Center(child: Image.asset("images/logo.png", height: 160)),
-
-            const SizedBox(height: 30),
-
-            /// EMAIL
-            TextFormField(
-              controller: emailController,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.email),
-                labelText: "Email",
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(25),
+          child: Form(
+            key: formKey,
+            child: Column(
+              children: [
+                Image.asset(
+                  'assets/logo remover.png',
+                  // fit:BoxFit.fill ,
                 ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Email is required";
-                }
-                if (!value.contains("@")) {
-                  return "Enter valid email";
-                }
-                return null;
-              },
-            ),
 
-            const SizedBox(height: 15),
-
-            /// PASSWORD
-            TextFormField(
-              controller: passwordController,
-              obscureText: !isVisible,
-              decoration: InputDecoration(
-                labelText: "Password",
-                prefixIcon: const Icon(Icons.lock),
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    isVisible ? Icons.visibility : Icons.visibility_off,
+                const SizedBox(height: 30),
+                //////////////////////////////////////////////////////////////////
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.teal),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.teal),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: Colors.teal,
+                        width: 2,
+                      ),
+                    ),
+                    labelText: "Email or Phone",
+                    hintText: "Enter your email or phone number",
                   ),
-                  onPressed: () {
-                    setState(() {
-                      isVisible = !isVisible;
-                    });
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Email or phone is required";
+                    }
+
+                    if (RegExp(r'^01[0-9]+$').hasMatch(value)) {
+                      if (value.length != 11) {
+                        return "Enter valid phone number";
+                      }
+                    } else if (RegExp(r'^[a-zA-Z0-9@._-]+$').hasMatch(value)) {
+                      if (!value.contains('@') || !value.contains('.')) {
+                        return "Enter valid email address";
+                      }
+                    } else {
+                      return "Enter valid email or phone number";
+                    }
+
+                    return null;
                   },
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Password is required";
-                }
-                if (value.length < 6) {
-                  return "Minimum 6 characters";
-                }
-                return null;
-              },
-            ),
 
-            /// FORGET PASSWORD
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SetNewPasswordScreen(),
+                const SizedBox(height: 15),
+                //////////////////////////////////////////////
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: !isvisible,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    hintText: "Enter your password",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.teal),
                     ),
-                  );
-                },
-                child: const Text(
-                  "Forgot Password?",
-                  style: TextStyle(color: Colors.teal),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.teal),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: Colors.teal,
+                        width: 2,
+                      ),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isvisible ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          isvisible = !isvisible;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Password is required";
+                    if (value.length < 6) return "At least 6 characters";
+                    return null;
+                  },
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            /// LOGIN BUTTON
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ////////////////////////////////////////////////////////////
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      //                      Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(builder: (context) => const SetNewPasswordScreen()),
+                      // );
+                    },
+                    child: const Text(
+                      "Forgot Password?",
+                      style: TextStyle(color: Colors.teal),
+                    ),
+                  ),
                 ),
-                onPressed: () async {
-                  if (!formKey.currentState!.validate()) return;
 
-                  try {
-                    final role = await _firebaseServices.login(
-                      email: emailController.text.trim(),
-                      password: passwordController.text.trim(),
-                    );
+                const SizedBox(height: 15),
 
-                    if (!mounted) return;
-
-                    if (role == 'patient') {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PatientHomeScreen(),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Not a patient account.")),
-                      );
-                    }
-                  } on FirebaseAuthException catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.message ?? "Login failed")),
-                    );
-                  }
-                },
-                child: const Text(
-                  "Login",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                /////////////////////////////////////////////
+                SizedBox(
+                  width: double.infinity,
+                  child: MaterialButton(
+                    onPressed: () {
+                      // التحقق قبل الانتقال
+                      if (formKey.currentState!.validate()) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PatientHomeScreen(),
+                          ),
+                        );
+                      } else {}
+                    },
+                    color: Colors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      "Continue",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            /// SIGN UP
-            Center(
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PatientSignUp()),
-                  );
-                },
-                child: Text.rich(
-                  TextSpan(
-                    text: "Don't have an account? ",
-                    children: [
-                      TextSpan(
-                        text: "Sign Up",
+                Container(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? "),
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PateintSignup(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Create Account",
                         style: TextStyle(
-                          color: Colors.teal.shade700,
+                          color: Colors.teal,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

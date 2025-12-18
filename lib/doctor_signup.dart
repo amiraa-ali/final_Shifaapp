@@ -1,23 +1,92 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
-import 'doctor_login.dart';
+import 'package:shifa/doctor_login.dart';
 
 class DoctorSignup extends StatefulWidget {
   const DoctorSignup({super.key});
 
   @override
-  State<DoctorSignup> createState() => _DoctorSignupState();
+  State<DoctorSignup> createState() => _SignUpPageState();
 }
 
-class _DoctorSignupState extends State<DoctorSignup> {
+class _SignUpPageState extends State<DoctorSignup> {
   final formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
+  final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  bool isvisible = false;
+  final confirmPasswordController = TextEditingController();
+  final specialtyController = TextEditingController();
+  final phoneController = TextEditingController();
 
   final FirebaseServices _firebaseServices = FirebaseServices();
+
+  bool isvisible = false;
+  bool isLoading = false;
+
+  Future<void> _handleSignup() async {
+    if (!formKey.currentState!.validate()) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _firebaseServices.doctorSignUp(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        name: fullNameController.text.trim(),
+        specialization: specialtyController.text.trim(),
+        clinicLocation: String.fromCharCode(
+          65 + fullNameController.text.length % 26,
+        ), // Dummy location
+        fees: 100.0 + fullNameController.text.length * 10, // Dummy
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DoctorLogin()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      String message = e.toString().replaceAll('Exception: ', '');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    fullNameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    specialtyController.dispose();
+    phoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,16 +118,33 @@ class _DoctorSignupState extends State<DoctorSignup> {
               ),
             ),
           ),
-
+          Positioned(
+            bottom: 180,
+            left: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.teal.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(25),
               child: Form(
                 key: formKey,
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(height: 200, child: Image.asset("image/logo.png")),
-
+                    SizedBox(
+                      height: 200,
+                      child: Image.asset(
+                        "assets/logo remover.png",
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                     const Text(
                       "Create your new account",
                       style: TextStyle(
@@ -67,48 +153,179 @@ class _DoctorSignupState extends State<DoctorSignup> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 30),
 
+                    // Full Name
                     TextFormField(
-                      controller: _fullNameController,
+                      controller: fullNameController,
+                      enabled: !isLoading,
                       decoration: InputDecoration(
                         labelText: "Full Name",
+                        hintText: "Enter your full name",
                         prefixIcon: const Icon(Icons.person),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
                         ),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? "Name required" : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Your name is required";
+                        }
+                        if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
+                          return "Enter a valid full name";
+                        }
+                        return null;
+                      },
                     ),
-
                     const SizedBox(height: 15),
 
+                    // Email
                     TextFormField(
                       controller: emailController,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: "Email",
-                        prefixIcon: const Icon(Icons.email),
+                        hintText: "Enter your email",
+                        prefixIcon: const Icon(Icons.email_outlined),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
                         ),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? "Email required" : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Email is required";
+                        }
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return "Enter valid email address";
+                        }
+                        return null;
+                      },
                     ),
-
                     const SizedBox(height: 15),
 
+                    // Phone Number
+                    TextFormField(
+                      controller: phoneController,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: "Phone Number",
+                        hintText: "Enter your phone number",
+                        prefixIcon: const Icon(Icons.phone),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Phone number is required";
+                        }
+                        if (!RegExp(r'^01[0-9]{9}$').hasMatch(value)) {
+                          return "Enter valid 11-digit phone number";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Specialty
+                    TextFormField(
+                      controller: specialtyController,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: "Specialty",
+                        hintText: "e.g., Cardiology, Pediatrics",
+                        prefixIcon: const Icon(Icons.medical_services),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Specialty is required";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Password
                     TextFormField(
                       controller: passwordController,
                       obscureText: !isvisible,
+                      enabled: !isLoading,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        prefixIcon: const Icon(Icons.lock),
+                        hintText: "Enter your password",
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             isvisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
@@ -116,79 +333,109 @@ class _DoctorSignupState extends State<DoctorSignup> {
                             });
                           },
                         ),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) return "Password is required";
+                        if (value.length < 6) return "At least 6 characters";
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Confirm Password
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: !isvisible,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: "Confirm password",
+                        prefixIcon: const Icon(Icons.lock_reset),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isvisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isvisible = !isvisible;
+                            });
+                          },
                         ),
                       ),
-                      validator: (value) =>
-                          value!.length < 6 ? "Min 6 chars" : null,
+                      validator: (value) {
+                        if (value != passwordController.text) {
+                          return "Passwords do not match";
+                        }
+                        return null;
+                      },
                     ),
-
                     const SizedBox(height: 40),
 
+                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       child: MaterialButton(
+                        onPressed: isLoading ? null : _handleSignup,
                         color: Colors.teal,
+                        disabledColor: Colors.teal.withOpacity(0.5),
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          "Create Account",
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
-
-                          try {
-                            await _firebaseServices.signUp(
-                              email: emailController.text.trim(),
-                              password: passwordController.text.trim(),
-                              role: 'doctor',
-                              extraData: {
-                                'name': _fullNameController.text.trim(),
-                              },
-                            );
-
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Doctor account created"),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                "Continue",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
                               ),
-                            );
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DoctorLogin(),
-                              ),
-                            );
-                          } on FirebaseAuthException catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(e.message ?? "Error")),
-                            );
-                          }
-                        },
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
+                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Already have an account? "),
+                        const Text("Already have an account?"),
                         InkWell(
-                          onTap: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DoctorLogin(),
-                              ),
-                            );
-                          },
+                          onTap: isLoading
+                              ? null
+                              : () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const DoctorLogin(),
+                                    ),
+                                  );
+                                },
                           child: const Text(
-                            "Login",
+                            " Login",
                             style: TextStyle(
                               color: Colors.teal,
                               fontWeight: FontWeight.bold,

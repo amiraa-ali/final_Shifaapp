@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_home_screen.dart';
 import '../forget_password.dart';
-import 'welcome.dart';
 import 'doctor_signup.dart';
 
 class DoctorLogin extends StatefulWidget {
@@ -17,8 +16,75 @@ class _DoctorLoginState extends State<DoctorLogin> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool isvisible = false;
+  bool isLoading = false;
 
   final FirebaseServices _firebaseServices = FirebaseServices();
+
+  Future<void> _handleLogin() async {
+    // Basic validation
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter email and password"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final role = await _firebaseServices.doctorSignIn(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (role == 'doctor') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("This account is not registered as a doctor"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      String message = e.toString().replaceAll('Exception: ', '');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +109,11 @@ class _DoctorLoginState extends State<DoctorLogin> {
               TextFormField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
+                enabled: !isLoading,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.email),
-                  labelText: "Email or Phone",
-                  hintText: "Enter your email or phone number",
+                  labelText: "Email",
+                  hintText: "Enter your email",
                   filled: true,
                   fillColor: Colors.grey.shade200,
                   border: OutlineInputBorder(
@@ -60,6 +127,7 @@ class _DoctorLoginState extends State<DoctorLogin> {
               TextFormField(
                 controller: passwordController,
                 obscureText: !isvisible,
+                enabled: !isLoading,
                 decoration: InputDecoration(
                   labelText: "Password",
                   hintText: "Enter your password",
@@ -87,14 +155,16 @@ class _DoctorLoginState extends State<DoctorLogin> {
                 margin: const EdgeInsets.only(top: 10, bottom: 20),
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SetNewPasswordScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SetNewPasswordScreen(),
+                            ),
+                          );
+                        },
                   child: const Text(
                     "Forgot Password?",
                     style: TextStyle(color: Colors.teal),
@@ -107,66 +177,40 @@ class _DoctorLoginState extends State<DoctorLogin> {
           SizedBox(
             width: double.infinity,
             child: MaterialButton(
-              onPressed: () async {
-                try {
-                  final role = await _firebaseServices.login(
-                    email: emailController.text.trim(),
-                    password: passwordController.text.trim(),
-                  );
-
-                  if (role == 'doctor') {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const DoctorHomeScreen(),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("This account is not a doctor"),
-                      ),
-                    );
-                  }
-                } on FirebaseAuthException catch (e) {
-                  String message;
-                  switch (e.code) {
-                    case 'user-not-found':
-                      message = "No user found for that email.";
-                      break;
-                    case 'wrong-password':
-                      message = "Wrong password.";
-                      break;
-                    default:
-                      message = "Login failed. Please try again.";
-                  }
-
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(message)));
-                }
-              },
+              onPressed: isLoading ? null : _handleLogin,
               color: Colors.teal,
+              disabledColor: Colors.teal.withOpacity(0.5),
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text(
-                "Login",
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      "Login",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
             ),
           ),
 
           const SizedBox(height: 20),
 
           InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DoctorSignup()),
-              );
-            },
+            onTap: isLoading
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DoctorSignup()),
+                    );
+                  },
             child: Center(
               child: Text.rich(
                 TextSpan(

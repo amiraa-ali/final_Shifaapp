@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'doctor_login.dart';
-import 'patient_login.dart';
+import 'package:shifa/patient_login.dart';
+import 'package:shifa/doctor_login.dart';
 
 void main() {
   runApp(
@@ -47,7 +47,7 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset("images/logo.png", fit: BoxFit.cover),
+                Image.asset("image/logo.png", fit: BoxFit.cover),
                 const SizedBox(height: 10),
                 const Text(
                   "Your Smart Health Companion",
@@ -82,7 +82,7 @@ class WelcomeScreen extends StatelessWidget {
                       elevation: 3,
                     ),
                     child: const Text(
-                      "Continue as a patient",
+                      "Continue as a Patient",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -113,7 +113,7 @@ class WelcomeScreen extends StatelessWidget {
                       elevation: 3,
                     ),
                     child: const Text(
-                      "Continue as a doctor",
+                      "Coninue as a Doctor",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),

@@ -1,19 +1,5 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: DoctorProfile(),
-    );
-  }
-}
+import 'package:shifa/Services/firebase_services.dart';
 
 class DoctorProfile extends StatefulWidget {
   const DoctorProfile({super.key});
@@ -22,6 +8,8 @@ class DoctorProfile extends StatefulWidget {
 }
 
 class _DoctorProfileState extends State<DoctorProfile> {
+  final FirebaseServices _firebaseServices = FirebaseServices();
+
   static const Color primaryIconColor = Color(0xff009f93);
   static const Color lightIconBackground = Color(0xFFE0F7F7);
   static const LinearGradient unifiedGradient = LinearGradient(
@@ -33,40 +21,77 @@ class _DoctorProfileState extends State<DoctorProfile> {
   Color avatarColor = Colors.blue;
   final _formKey = GlobalKey<FormState>();
 
-  int _selectedIndex = 3;
+  // State management
+  bool isLoading = true;
+  bool isSaving = false;
+  String? doctorId;
 
-  final emailController = TextEditingController(text: 'dr.sarah@gmail.com');
-  final phoneController = TextEditingController(text: '01012345678');
-  final locationController = TextEditingController(
-    text: 'New Cairo Medical Center',
-  );
-  final specializationController = TextEditingController(
-    text: "Dermatology & Ophthalmology",
-  );
-  final universityController = TextEditingController(text: "Cairo University");
-  final certificateController = TextEditingController(
-    text: "MD, Master Degree",
-  );
-  final aboutController = TextEditingController(
-    text: "Experienced consultant with more than 10 years of practice ",
-  );
+  // Controllers
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final locationController = TextEditingController();
+  final specializationController = TextEditingController();
+  final universityController = TextEditingController();
+  final certificateController = TextEditingController();
+  final aboutController = TextEditingController();
+  final feesController = TextEditingController();
 
-  String nameDisplay = '';
+  String nameDisplay = 'Dr. Loading...';
 
   @override
   void initState() {
     super.initState();
-    nameDisplay = 'Dr. Sarah';
+    _loadDoctorProfile();
 
     specializationController.addListener(() {
       setState(() {});
     });
+  }
 
-    emailController.addListener(() {
-      if (emailController.text.contains('@')) {
-        setState(() => nameDisplay = emailController.text.split('@')[0]);
+  Future<void> _loadDoctorProfile() async {
+    setState(() => isLoading = true);
+
+    doctorId = _firebaseServices.getCurrentUserId();
+
+    if (doctorId == null) {
+      setState(() => isLoading = false);
+      return;
+    }
+
+    try {
+      final profile = await _firebaseServices.getDoctorProfile(doctorId!);
+
+      if (profile != null) {
+        setState(() {
+          nameDisplay = profile['name'] ?? 'Dr. Unknown';
+          emailController.text = profile['email'] ?? '';
+          phoneController.text = profile['phone'] ?? '';
+          locationController.text = profile['clinicLocation'] ?? '';
+          specializationController.text = profile['specialization'] ?? '';
+          feesController.text = (profile['fees'] ?? 0).toString();
+
+          // Load additional fields if they exist
+          universityController.text = profile['university'] ?? '';
+          certificateController.text = profile['certificate'] ?? '';
+          aboutController.text = profile['about'] ?? '';
+
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
       }
-    });
+    } catch (e) {
+      print('Error loading profile: $e');
+      if (mounted) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading profile: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -78,6 +103,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
     universityController.dispose();
     certificateController.dispose();
     aboutController.dispose();
+    feesController.dispose();
     super.dispose();
   }
 
@@ -85,18 +111,237 @@ class _DoctorProfileState extends State<DoctorProfile> {
     () => avatarColor = avatarColor == Colors.blue ? Colors.red : Colors.blue,
   );
 
-  void onNavBarTapped(int index) => setState(() => _selectedIndex = index);
-
-  void saveForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Data is valid! ✅')));
-    } else {
+  Future<void> saveForm() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please fix errors ⚠️')));
+      return;
     }
+
+    if (doctorId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Error: Not logged in')));
+      return;
+    }
+
+    setState(() => isSaving = true);
+
+    try {
+      // Prepare update data
+      Map<String, dynamic> updateData = {
+        'phone': phoneController.text.trim(),
+        'clinicLocation': locationController.text.trim(),
+        'specialization': specializationController.text.trim(),
+        'university': universityController.text.trim(),
+        'certificate': certificateController.text.trim(),
+        'about': aboutController.text.trim(),
+      };
+
+      // Add fees if provided
+      if (feesController.text.isNotEmpty) {
+        updateData['fees'] = double.tryParse(feesController.text) ?? 0.0;
+      }
+
+      bool success = await _firebaseServices.updateDoctorProfile(
+        doctorId!,
+        updateData,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully! ✅'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Failed to update profile');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: primaryIconColor)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xfff2f2f2),
+
+      floatingActionButton: isSaving
+          ? const CircularProgressIndicator()
+          : ElevatedButton(
+              onPressed: saveForm,
+              style: ElevatedButton.styleFrom(
+                shape: const StadiumBorder(),
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 15,
+                ),
+              ),
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: primaryIconColor,
+                ),
+              ),
+            ),
+
+      body: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // ================= HEADER =================
+              _buildProfileHeader(context),
+
+              const SizedBox(height: 30),
+
+              // ================= SPECIALIZATION =================
+              sectionCard(
+                title: "Specialization",
+                children: [
+                  _buildInfoField(
+                    icon: Icons.medical_services,
+                    label: "Specialization",
+                    controller: specializationController,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? "Specialization required"
+                        : null,
+                    isLast: true,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ================= CONTACT INFORMATION =================
+              sectionCard(
+                title: "Contact Information",
+                children: [
+                  // Email (read-only)
+                  _buildInfoField(
+                    icon: Icons.email,
+                    label: "Email (Cannot be changed)",
+                    controller: emailController,
+                    enabled: false,
+                  ),
+                  // Phone
+                  _buildInfoField(
+                    icon: Icons.phone,
+                    label: "Phone",
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return "Phone is required";
+                      if (v.length != 11 || int.tryParse(v) == null) {
+                        return "Phone must be 11 digits";
+                      }
+                      return null;
+                    },
+                  ),
+                  // Clinic / Location
+                  _buildInfoField(
+                    icon: Icons.location_on,
+                    label: "Clinic / Location",
+                    controller: locationController,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? "Clinic is required" : null,
+                  ),
+                  // Fees
+                  _buildInfoField(
+                    icon: Icons.attach_money,
+                    label: "Consultation Fees (EGP)",
+                    controller: feesController,
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return "Fees required";
+                      if (double.tryParse(v) == null) {
+                        return "Enter valid number";
+                      }
+                      return null;
+                    },
+                    isLast: true,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ================= EDUCATION =================
+              sectionCard(
+                title: "Education",
+                children: [
+                  // University
+                  _buildInfoField(
+                    icon: Icons.account_balance,
+                    label: "University",
+                    controller: universityController,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? "University required" : null,
+                  ),
+                  // Certificate
+                  _buildInfoField(
+                    icon: Icons.workspace_premium,
+                    label: "Certificate / Degree",
+                    controller: certificateController,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? "Certificate required"
+                        : null,
+                    isLast: true,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ================= ABOUT =================
+              sectionCard(
+                title: "About Doctor",
+                children: [
+                  TextFormField(
+                    controller: aboutController,
+                    maxLines: 4,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? "About is required" : null,
+                    decoration: InputDecoration(
+                      hintText: "Write about the doctor...",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 100),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildProfileHeader(BuildContext context) {
@@ -154,15 +399,13 @@ class _DoctorProfileState extends State<DoctorProfile> {
     String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
     bool isLast = false,
+    bool enabled = true,
   }) {
-    String? validationMessage = validator != null
-        ? validator(controller.text)
-        : null;
-
     Widget inputField = TextFormField(
       controller: controller,
       maxLines: label.contains("About") ? 4 : 1,
       keyboardType: keyboardType,
+      enabled: enabled,
       validator: (v) {
         WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
         return validator?.call(v);
@@ -173,7 +416,9 @@ class _DoctorProfileState extends State<DoctorProfile> {
           fontSize: 14,
           color: (validator?.call(controller.text) != null)
               ? Colors.red
-              : Colors.grey[700],
+              : enabled
+              ? Colors.grey[700]
+              : Colors.grey[500],
         ),
         floatingLabelBehavior: FloatingLabelBehavior.never,
         border: InputBorder.none,
@@ -183,16 +428,15 @@ class _DoctorProfileState extends State<DoctorProfile> {
         errorStyle: const TextStyle(fontSize: 13, color: Colors.red),
         errorMaxLines: 2,
       ),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
-        color: Colors.black87,
+        color: enabled ? Colors.black87 : Colors.grey,
       ),
     );
 
     return Container(
       margin: EdgeInsets.only(bottom: isLast ? 0 : 20),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -254,155 +498,6 @@ class _DoctorProfileState extends State<DoctorProfile> {
               ),
               const SizedBox(height: 15),
               ...children,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xfff2f2f2),
-
-      floatingActionButton: ElevatedButton(
-        onPressed: saveForm,
-        style: ElevatedButton.styleFrom(
-          shape: const StadiumBorder(),
-          backgroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
-        ),
-        child: const Text(
-          'Done',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: primaryIconColor,
-          ),
-        ),
-      ),
-
-      body: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // ================= HEADER =================
-              _buildProfileHeader(context),
-
-              const SizedBox(height: 30),
-
-              // ================= SPECIALIZATION =================
-              sectionCard(
-                title: "Specialization",
-                children: [
-                  _buildInfoField(
-                    icon: Icons.medical_services,
-                    label: "Specialization",
-                    controller: specializationController,
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? "Specialization required"
-                        : null,
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= CONTACT INFORMATION =================
-              sectionCard(
-                title: "Contact Information",
-                children: [
-                  // Email
-                  _buildInfoField(
-                    icon: Icons.email,
-                    label: "Email",
-                    controller: emailController,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return "Email is required";
-                      if (!v.contains("@") || !v.contains(".")) {
-                        return "Enter valid email";
-                      }
-                      return null;
-                    },
-                  ),
-                  // Phone
-                  _buildInfoField(
-                    icon: Icons.phone,
-                    label: "Phone",
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return "Phone is required";
-                      if (v.length != 11 || int.tryParse(v ?? '') == null) {
-                        return "Phone must be 11 digits";
-                      }
-                      return null;
-                    },
-                  ),
-                  // Clinic / Location
-                  _buildInfoField(
-                    icon: Icons.location_on,
-                    label: "Clinic / Location",
-                    controller: locationController,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "Clinic is required" : null,
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= EDUCATION =================
-              sectionCard(
-                title: "Education",
-                children: [
-                  // University
-                  _buildInfoField(
-                    icon: Icons.account_balance,
-                    label: "University",
-                    controller: universityController,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "University required" : null,
-                  ),
-                  // Certificate
-                  _buildInfoField(
-                    icon: Icons.workspace_premium,
-                    label: "Certificate / Degree",
-                    controller: certificateController,
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? "Certificate required"
-                        : null,
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= ABOUT =================
-              sectionCard(
-                title: "About Doctor",
-                children: [
-                  TextFormField(
-                    controller: aboutController,
-                    maxLines: 4,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "About is required" : null,
-                    decoration: InputDecoration(
-                      hintText: "Write about the doctor...",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 100),
             ],
           ),
         ),

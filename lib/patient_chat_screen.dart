@@ -1,221 +1,197 @@
 import 'package:flutter/material.dart';
-import 'patient_home_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shifa/patient_home_screen.dart';
+import 'package:shifa/Services/firebase_services.dart';
 
 class PatientChatScreen extends StatelessWidget {
-  final String doctorName;
-  final String specialty;
-  final String? doctorImageUrl;
-  final String? appointmentId;
-  // يمكنك إضافة مسار صورة الطبيب هنا إذا أردت عرضها
-
-  const PatientChatScreen({
-    super.key,
-    this.doctorName = 'Dr. Sarah Johnson', // قيمة افتراضية
-    this.specialty = 'Cardiologist', // قيمة افتراضية
-    this.doctorImageUrl,
-    this.appointmentId,
-  });
+  const PatientChatScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final FirebaseServices firebaseServices = FirebaseServices();
+    final String? currentUserId = firebaseServices.getCurrentUserId();
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PatientHomeScreen()),
-          ), // للرجوع للخلف
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const PatientHomeScreen()),
+            );
+          },
         ),
-        title: Row(
-          children: [
-            // صورة الطبيب (Avatar)
-            const CircleAvatar(
-              backgroundColor: Colors.grey,
-              // يمكنك استخدام Image.asset أو NetworkImage هنا
-              child: Text('SJ'), // اختصار الاسم إذا لم تتوفر صورة
+        title: const Text(
+          "Chats",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xff39ab4a), Color(0xff009f93)],
+              begin: Alignment.bottomRight,
+              end: Alignment.topLeft,
             ),
-            const SizedBox(width: 10),
-            // تفاصيل الطبيب
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  doctorName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  specialty,
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
 
-      // جسم الصفحة (الفقرات والمحادثات)
-      body: Column(
-        children: <Widget>[
-          // منطقة عرض الرسائل
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(10.0),
-              children: const <Widget>[
-                // مثال على الرسائل (يمكن استبدالها بقائمة رسائل ديناميكية)
-                MessageBubble(
-                  text: 'Hello! How can I help you today?',
-                  time: '10:30 AM',
-                  isMe: false,
-                ),
-                MessageBubble(
-                  text:
-                      'Hi Doctor, I\'ve been experiencing some chest discomfort lately.',
-                  time: '10:32 AM',
-                  isMe: true,
-                ),
-                MessageBubble(
-                  text:
-                      'I understand. Can you describe the discomfort? When did it start?',
-                  time: '10:33 AM',
-                  isMe: false,
-                ),
-                MessageBubble(
-                  text:
-                      'It started about 3 days ago. It\'s a mild pain that comes and goes.',
-                  time: '10:35 AM',
-                  isMe: true,
-                ),
-                MessageBubble(
-                  text:
-                      'I see. I\'d recommend scheduling an in-person consultation so we can run some tests. Would you like to book an appointment?',
-                  time: '10:37 AM',
-                  isMe: false,
-                ),
-              ],
-            ),
-          ),
+      body: currentUserId == null
+          ? const Center(child: Text('Please log in to view chats'))
+          : StreamBuilder<QuerySnapshot>(
+              stream: firebaseServices.getPatientChats(currentUserId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.teal),
+                  );
+                }
 
-          // حقل إدخال الرسالة
-          _buildMessageInput(),
-        ],
-      ),
-    );
-  }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error: ${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-  // دالة بناء حقل إدخال الرسالة
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      color: Colors.white,
-      child: Row(
-        children: <Widget>[
-          // أيقونة المشبك (لإرفاق ملفات)
-          IconButton(
-            icon: const Icon(Icons.attach_file, color: Colors.grey),
-            onPressed: () {
-              // منطق إرفاق الملفات
-            },
-          ),
-          // حقل النص
-          const Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Type a message...',
-                border: InputBorder.none,
-              ),
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No chats yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Start chatting with your doctors',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final chats = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: chats.length,
+                  itemBuilder: (context, index) {
+                    final chatDoc = chats[index];
+                    final chatData = chatDoc.data() as Map<String, dynamic>;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ChatTile(
+                        chatId: chatDoc.id,
+                        name: chatData['doctorName'] ?? 'Doctor',
+                        message: chatData['lastMessage'] ?? 'No messages yet',
+                        onTap: () {
+                          // Navigate to chat detail screen
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => ChatDetailScreen(
+                          //       chatId: chatDoc.id,
+                          //       doctorName: chatData['doctorName'] ?? 'Doctor',
+                          //     ),
+                          //   ),
+                          // );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-          ),
-          // زر الإرسال
-          IconButton(
-            icon: const Icon(
-              Icons.send,
-              color: Color(0xFF1ABC9C),
-            ), // نفس لون الزر السابق
-            onPressed: () {
-              // منطق إرسال الرسالة
-            },
-          ),
-        ],
-      ),
     );
   }
 }
 
-// -------------------------------------------------------------------
+class ChatTile extends StatelessWidget {
+  final String chatId;
+  final String name;
+  final String message;
+  final VoidCallback? onTap;
 
-// مكون فقاعة الرسالة القابلة لإعادة الاستخدام (Message Bubble Widget)
-class MessageBubble extends StatelessWidget {
-  final String text;
-  final String time;
-  final bool isMe;
-
-  const MessageBubble({
+  const ChatTile({
     super.key,
-    required this.text,
-    required this.time,
-    required this.isMe,
+    required this.chatId,
+    required this.name,
+    required this.message,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // محاذاة الفقاعة (يمين إذا كانت مني، يسار إذا كانت من الطرف الآخر)
-    return Padding(
-      padding: const EdgeInsets.all(5.0),
-      child: Column(
-        crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: <Widget>[
-          Material(
-            elevation: 2.0,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(15.0),
-              topRight: const Radius.circular(15.0),
-              // تحديد انحناء الزاوية السفلية بناءً على المرسل
-              bottomLeft: isMe
-                  ? const Radius.circular(15.0)
-                  : const Radius.circular(3.0),
-              bottomRight: isMe
-                  ? const Radius.circular(3.0)
-                  : const Radius.circular(15.0),
-            ),
-            color: isMe
-                ? const Color(0xFF2ECC71)
-                : Colors.white, // ألوان الفقاعات
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 10.0,
-                horizontal: 15.0,
-              ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black87,
-                  fontSize: 15.0,
-                ),
-              ),
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 3,
+      shadowColor: Colors.black12,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [Color(0xff39ab4a), Color(0xff009f93)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          // الوقت أسفل الرسالة
-          Padding(
-            padding: EdgeInsets.only(
-              top: 4.0,
-              right: isMe ? 8.0 : 0,
-              left: isMe ? 0 : 8.0,
-            ),
-            child: Text(
-              time,
-              style: const TextStyle(fontSize: 12.0, color: Colors.grey),
-            ),
-          ),
-        ],
+          child: const Icon(Icons.person, color: Colors.white, size: 28),
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Text(
+          message,
+          style: TextStyle(color: Colors.grey.shade700),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 18,
+          color: Colors.grey,
+        ),
+        onTap: onTap ?? () {},
       ),
     );
   }

@@ -41,48 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBHbpcSPAqvOmLPgrEA3yO38xAM7-ikkx0',
-    appId: '1:713217968202:web:c9de62e86678a05beffeb3',
-    messagingSenderId: '713217968202',
-    projectId: 'shifa-25809',
-    authDomain: 'shifa-25809.firebaseapp.com',
-    storageBucket: 'shifa-25809.firebasestorage.app',
-    measurementId: 'G-T8S7LENGNL',
+    apiKey: 'AIzaSyDqzgt7250xi4g4AmSH368kJL_nif9na4g',
+    appId: '1:14990694374:web:58485b2d61f5ea5a8a2827',
+    messagingSenderId: '14990694374',
+    projectId: 'shifaapp-f9163',
+    authDomain: 'shifaapp-f9163.firebaseapp.com',
+    storageBucket: 'shifaapp-f9163.firebasestorage.app',
+    measurementId: 'G-YDZ15Q6F0N',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAg1gr9secwnyL1fMZg1lzqno8vm_RLAb8',
-    appId: '1:713217968202:android:8a09d526c4453878effeb3',
-    messagingSenderId: '713217968202',
-    projectId: 'shifa-25809',
-    storageBucket: 'shifa-25809.firebasestorage.app',
+    apiKey: 'AIzaSyDAbGd0lbAZQoN_4wUFWoAdHmCkhlvKnpI',
+    appId: '1:14990694374:android:a367b75be07a1aa58a2827',
+    messagingSenderId: '14990694374',
+    projectId: 'shifaapp-f9163',
+    storageBucket: 'shifaapp-f9163.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCVXYm3JkJbgOSCs3ZI-RE5QSdYhhB8exA',
-    appId: '1:713217968202:ios:bbcba115003366a0effeb3',
-    messagingSenderId: '713217968202',
-    projectId: 'shifa-25809',
-    storageBucket: 'shifa-25809.firebasestorage.app',
+    apiKey: 'AIzaSyBGxzClaA3ZtrTvp_igg0wU1HHDAGuECXs',
+    appId: '1:14990694374:ios:5a0439a3a15865ed8a2827',
+    messagingSenderId: '14990694374',
+    projectId: 'shifaapp-f9163',
+    storageBucket: 'shifaapp-f9163.firebasestorage.app',
     iosBundleId: 'com.example.shifa',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCVXYm3JkJbgOSCs3ZI-RE5QSdYhhB8exA',
-    appId: '1:713217968202:ios:bbcba115003366a0effeb3',
-    messagingSenderId: '713217968202',
-    projectId: 'shifa-25809',
-    storageBucket: 'shifa-25809.firebasestorage.app',
+    apiKey: 'AIzaSyBGxzClaA3ZtrTvp_igg0wU1HHDAGuECXs',
+    appId: '1:14990694374:ios:5a0439a3a15865ed8a2827',
+    messagingSenderId: '14990694374',
+    projectId: 'shifaapp-f9163',
+    storageBucket: 'shifaapp-f9163.firebasestorage.app',
     iosBundleId: 'com.example.shifa',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBHbpcSPAqvOmLPgrEA3yO38xAM7-ikkx0',
-    appId: '1:713217968202:web:b3e55214ebc79ab3effeb3',
-    messagingSenderId: '713217968202',
-    projectId: 'shifa-25809',
-    authDomain: 'shifa-25809.firebaseapp.com',
-    storageBucket: 'shifa-25809.firebasestorage.app',
-    measurementId: 'G-1BBRHKVK8L',
+    apiKey: 'AIzaSyDqzgt7250xi4g4AmSH368kJL_nif9na4g',
+    appId: '1:14990694374:web:51a89ad70e3ce6478a2827',
+    messagingSenderId: '14990694374',
+    projectId: 'shifaapp-f9163',
+    authDomain: 'shifaapp-f9163.firebaseapp.com',
+    storageBucket: 'shifaapp-f9163.firebasestorage.app',
+    measurementId: 'G-TZLWNCSH83',
   );
+
 }
