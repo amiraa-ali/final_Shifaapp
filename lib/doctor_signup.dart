@@ -140,10 +140,7 @@ class _SignUpPageState extends State<DoctorSignup> {
                   children: [
                     SizedBox(
                       height: 200,
-                      child: Image.asset(
-                        "assets/logo remover.png",
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.asset("images/logo.png", fit: BoxFit.cover),
                     ),
                     const Text(
                       "Create your new account",
@@ -257,9 +254,13 @@ class _SignUpPageState extends State<DoctorSignup> {
                         if (value == null || value.isEmpty) {
                           return "Phone number is required";
                         }
-                        if (!RegExp(r'^01[0-9]{9}$').hasMatch(value)) {
-                          return "Enter valid 11-digit phone number";
+
+                        if (!RegExp(
+                          r'^(010|011|012|015)[0-9]{8}$',
+                        ).hasMatch(value)) {
+                          return "Enter valid phone number (010 / 011 / 012 / 015)";
                         }
+
                         return null;
                       },
                     ),

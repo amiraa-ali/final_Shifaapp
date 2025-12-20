@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shifa/Services/firebase_services.dart';
 import 'patient_login.dart';
-// import 'login.dart';
-
-void main() {
-  runApp(
-    const MaterialApp(debugShowCheckedModeBanner: false, home: PateintSignup()),
-  );
-}
 
 class PateintSignup extends StatefulWidget {
   const PateintSignup({super.key});
@@ -17,9 +11,76 @@ class PateintSignup extends StatefulWidget {
 
 class _PateintSignupState extends State<PateintSignup> {
   final formKey = GlobalKey<FormState>();
+  final fullNameController = TextEditingController();
   final emailController = TextEditingController();
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  final FirebaseServices _firebaseServices = FirebaseServices();
+
   bool isvisible = false;
+  bool isLoading = false;
+
+  Future<void> _handleSignup() async {
+    if (!formKey.currentState!.validate()) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _firebaseServices.patientSignUp(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        name: fullNameController.text.trim(),
+        phone: phoneController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully! Please login.'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PatientLogin()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      String message = e.toString().replaceAll('Exception: ', '');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    fullNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +134,7 @@ class _PateintSignupState extends State<PateintSignup> {
                   children: [
                     SizedBox(
                       height: 200,
-                      child: Image.asset(
-                        "assets/logo remover.png",
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.asset("images/logo.png", fit: BoxFit.cover),
                     ),
                     const Text(
                       "Create your new account",
@@ -87,9 +145,13 @@ class _PateintSignupState extends State<PateintSignup> {
                       ),
                     ),
                     const SizedBox(height: 30),
+
+                    // Full Name
                     TextFormField(
+                      controller: fullNameController,
+                      enabled: !isLoading,
                       decoration: InputDecoration(
-                        labelText: "FullName",
+                        labelText: "Full Name",
                         hintText: "Enter your full name",
                         prefixIcon: const Icon(Icons.person),
                         border: OutlineInputBorder(
@@ -119,11 +181,15 @@ class _PateintSignupState extends State<PateintSignup> {
                       },
                     ),
                     const SizedBox(height: 15),
+
+                    // Email
                     TextFormField(
                       controller: emailController,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        labelText: "Email or Phone",
-                        hintText: "Enter your email or phone number",
+                        labelText: "Email",
+                        hintText: "Enter your email",
                         prefixIcon: const Icon(Icons.email_outlined),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -143,28 +209,62 @@ class _PateintSignupState extends State<PateintSignup> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return "Email or phone is required";
+                          return "Email is required";
                         }
-                        if (RegExp(r'^[0-9]+$').hasMatch(value)) {
-                          if (value.length != 11) {
-                            return "Enter valid phone number";
-                          }
-                        } else if (RegExp(
-                          r'^[a-zA-Z0-9@._-]+$',
-                        ).hasMatch(value)) {
-                          if (!value.contains('@') || !value.contains('.')) {
-                            return "Enter valid email address";
-                          }
-                        } else {
-                          return "Enter valid email or phone number";
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return "Enter valid email address";
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
+
+                    // Phone Number
+                    TextFormField(
+                      controller: phoneController,
+                      enabled: !isLoading,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: "Phone Number",
+                        hintText: "Enter your phone number",
+                        prefixIcon: const Icon(Icons.phone),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Phone number is required";
+                        }
+
+                        if (!RegExp(
+                          r'^(010|011|012|015)[0-9]{8}$',
+                        ).hasMatch(value)) {
+                          return "Enter valid phone number (010 / 011 / 012 / 015)";
+                        }
+
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Password
                     TextFormField(
                       controller: passwordController,
                       obscureText: !isvisible,
+                      enabled: !isLoading,
                       decoration: InputDecoration(
                         labelText: "Password",
                         hintText: "Enter your password",
@@ -203,8 +303,12 @@ class _PateintSignupState extends State<PateintSignup> {
                       },
                     ),
                     const SizedBox(height: 15),
+
+                    // Confirm Password
                     TextFormField(
+                      controller: confirmPasswordController,
                       obscureText: !isvisible,
+                      enabled: !isLoading,
                       decoration: InputDecoration(
                         labelText: "Confirm password",
                         prefixIcon: const Icon(Icons.lock_reset),
@@ -244,49 +348,55 @@ class _PateintSignupState extends State<PateintSignup> {
                     ),
                     const SizedBox(height: 40),
 
+                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       child: MaterialButton(
-                        onPressed: () {
-                          // التحقق قبل الانتقال
-                          if (formKey.currentState!.validate()) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PatientLogin(),
-                              ),
-                            );
-                          } else {
-                            // لو في حاجة ناقصة → مش هيروح
-                            // مفيش داعي تعملى حاجة هنا لأن الـ validator بيظهر الرسالة تلقائي
-                          }
-                        },
+                        onPressed: isLoading ? null : _handleSignup,
                         color: Colors.teal,
+                        disabledColor: Colors.teal.withOpacity(0.5),
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                "Continue",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
 
                     const SizedBox(height: 20),
+
+                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Already have an account?"),
+                        const Text("Already have an account? "),
                         InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PatientLogin(),
-                              ),
-                            );
-                          },
+                          onTap: isLoading
+                              ? null
+                              : () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const PatientLogin(),
+                                    ),
+                                  );
+                                },
                           child: const Text(
                             "Login",
                             style: TextStyle(

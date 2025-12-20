@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/welcome.dart';
 
 class DoctorProfile extends StatefulWidget {
   const DoctorProfile({super.key});
@@ -176,6 +177,38 @@ class _DoctorProfileState extends State<DoctorProfile> {
     }
   }
 
+  Future<void> _confirmLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _firebaseServices.logout();
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -337,6 +370,34 @@ class _DoctorProfileState extends State<DoctorProfile> {
               ),
 
               const SizedBox(height: 100),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _confirmLogout,
+                    icon: const Icon(Icons.logout, color: Color.fromARGB(255, 255, 255, 255)),
+                    label: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 249, 247, 247),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                     style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 80),
             ],
           ),
         ),

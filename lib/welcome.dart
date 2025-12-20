@@ -47,7 +47,7 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset("image/logo.png", fit: BoxFit.cover),
+                Image.asset("images/logo.png", fit: BoxFit.cover),
                 const SizedBox(height: 10),
                 const Text(
                   "Your Smart Health Companion",
@@ -57,7 +57,6 @@ class WelcomeScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 50),
 
                 // ------------------- زرار Login ---------------------

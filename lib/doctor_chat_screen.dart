@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/doctor_home_screen.dart';
 
 class DoctorChatScreen extends StatelessWidget {
   const DoctorChatScreen({super.key});
@@ -14,6 +15,16 @@ class DoctorChatScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.teal,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
+              (route) => false,
+            );
+          },
+        ),
         title: const Text(
           "Chats",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

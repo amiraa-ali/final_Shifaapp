@@ -65,90 +65,139 @@ class FirebaseServices {
 
   // ==================== DOCTOR AUTH ====================
 
-  Future<UserCredential> doctorSignIn(String email, String password) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      print('Doctor sign in error: $e');
-      rethrow;
+  Future<String> doctorSignIn(String email, String password) async {
+  try {
+    final userCredential = await _auth.signInWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    );
+
+    print("AUTH SUCCESS UID: ${userCredential.user!.uid}");
+
+    // ✅ تأكيد إنه دكتور
+    final doc = await _firestore
+        .collection('doctors')
+        .doc(userCredential.user!.uid)
+        .get();
+
+    if (!doc.exists) {
+      await _auth.signOut();
+      throw Exception('This account is not registered as a doctor');
     }
+
+    // ✅ المهم هنا
+    return 'doctor';
+  } on FirebaseAuthException catch (e) {
+    print("AUTH ERROR CODE: ${e.code}");
+    print("AUTH ERROR MESSAGE: ${e.message}");
+    throw Exception(e.message);
+  } catch (e) {
+    print('Doctor sign in error: $e');
+    rethrow;
   }
+}
 
-  Future<UserCredential> doctorSignUp({
-    required String email,
-    required String password,
-    required String name,
-    required String specialization,
-    required String clinicLocation,
-    required double fees,
-  }) async {
-    try {
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(email: email, password: password);
+Future<UserCredential> doctorSignUp({
+  required String email,
+  required String password,
+  required String name,
+  required String specialization,
+  required String clinicLocation,
+  required double fees,
+}) async {
+  try {
+    UserCredential userCredential =
+        await _auth.createUserWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    );
 
-      await _firestore.collection('doctors').doc(userCredential.user!.uid).set({
-        'doctorId': userCredential.user!.uid,
-        'name': name,
-        'email': email,
-        'specialization': specialization,
-        'clinicLocation': clinicLocation,
-        'fees': fees,
-        'rating': 0.0,
-        'yearsExperience': 0,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+    await _firestore
+        .collection('doctors')
+        .doc(userCredential.user!.uid)
+        .set({
+      'doctorId': userCredential.user!.uid,
+      'name': name,
+      'email': email.trim().toLowerCase(),
+      'specialization': specialization,
+      'clinicLocation': clinicLocation,
+      'fees': fees,
+      'rating': 0.0,
+      'yearsExperience': 0,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-      return userCredential;
-    } catch (e) {
-      print('Doctor sign up error: $e');
-      rethrow;
-    }
+    return userCredential;
+  } catch (e) {
+    print('Doctor sign up error: $e');
+    rethrow;
   }
-
+}
   // ==================== PATIENT AUTH ====================
 
-  Future<UserCredential> patientSignIn(String email, String password) async {
-    try {
-      return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } catch (e) {
-      print('Patient sign in error: $e');
-      rethrow;
+ Future<String> patientSignIn(String email, String password) async {
+  try {
+    final userCredential = await _auth.signInWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    );
+
+    print("PATIENT AUTH SUCCESS UID: ${userCredential.user!.uid}");
+
+    // ✅ تأكيد إنه Patient
+    final doc = await _firestore
+        .collection('patients')
+        .doc(userCredential.user!.uid)
+        .get();
+
+    if (!doc.exists) {
+      await _auth.signOut();
+      throw Exception('This account is not registered as a patient');
     }
+
+    // ✅ المهم
+    return 'patient';
+  } on FirebaseAuthException catch (e) {
+    print("PATIENT AUTH ERROR CODE: ${e.code}");
+    print("PATIENT AUTH ERROR MESSAGE: ${e.message}");
+    throw Exception(e.message);
+  } catch (e) {
+    print('Patient sign in error: $e');
+    rethrow;
   }
+}
 
-  Future<UserCredential> patientSignUp({
-    required String email,
-    required String password,
-    required String name,
-    required String phone,
-  }) async {
-    try {
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(email: email, password: password);
+Future<UserCredential> patientSignUp({
+  required String email,
+  required String password,
+  required String name,
+  required String phone,
+}) async {
+  try {
+    UserCredential userCredential =
+        await _auth.createUserWithEmailAndPassword(
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    );
 
-      await _firestore
-          .collection('patients')
-          .doc(userCredential.user!.uid)
-          .set({
-            'patientId': userCredential.user!.uid,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+    await _firestore
+        .collection('patients')
+        .doc(userCredential.user!.uid)
+        .set({
+      'patientId': userCredential.user!.uid,
+      'name': name,
+      'email': email.trim().toLowerCase(),
+      'phone': phone,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-      return userCredential;
-    } catch (e) {
-      print('Patient sign up error: $e');
-      rethrow;
-    }
+    return userCredential;
+  } catch (e) {
+    print('Patient sign up error: $e');
+    rethrow;
   }
+}
+
 
   // ==================== DOCTOR PROFILE ====================
 
@@ -749,7 +798,6 @@ class FirebaseServices {
       return 0.0;
     }
   }
-
   // ==================== PASSWORD RESET ====================
 
   /// Send password reset email
@@ -762,6 +810,7 @@ class FirebaseServices {
       return false;
     }
   }
+  
 
   // ==================== USER ROLE CHECK ====================
 
@@ -963,3 +1012,6 @@ class FirebaseServices {
     });
   }
 }
+
+
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/doctor_home_screen.dart';
 
 class DoctorAppointmentScreen extends StatefulWidget {
   const DoctorAppointmentScreen({super.key});
@@ -97,7 +98,12 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DoctorHomeScreen(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(width: 10),
@@ -345,7 +351,7 @@ class _AppointmentCardState extends State<AppointmentCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Appointment cancelled'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
           ),
         );
         widget.onUpdate();

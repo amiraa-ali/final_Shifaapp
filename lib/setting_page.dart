@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/Services/firebase_services.dart';
 
 class SettingsPage extends StatelessWidget {
   SettingsPage({super.key});
-
-  final FirebaseServices _firebaseServices = FirebaseServices();
 
   @override
   Widget build(BuildContext context) {
@@ -124,137 +121,7 @@ class SettingsPage extends StatelessWidget {
             },
           ),
 
-          const Divider(),
-
-          const SizedBox(height: 20),
-
-          // Logout Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  // Show confirmation dialog
-                  final shouldLogout = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text("Logout"),
-                      content: const Text("Are you sure you want to logout?"),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text("Cancel"),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
-                          child: const Text("Logout"),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (shouldLogout == true && context.mounted) {
-                    // Show loading
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    );
-
-                    try {
-                      await _firebaseServices.logout();
-
-                      if (!context.mounted) return;
-
-                      // Close loading dialog
-                      Navigator.pop(context);
-
-                      // Navigate to welcome screen
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/welcome', (route) => false);
-                    } catch (e) {
-                      if (!context.mounted) return;
-
-                      // Close loading dialog
-                      Navigator.pop(context);
-
-                      // Show error
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error logging out: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text(
-                  "Sign Out",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Delete Account (Optional)
-          Center(
-            child: TextButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Delete Account"),
-                    content: const Text(
-                      "Are you sure you want to delete your account? This action cannot be undone.",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          // Handle account deletion
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Account deletion requested'),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text("Delete"),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: const Text(
-                "Delete Account",
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
         ],
       ),
     );

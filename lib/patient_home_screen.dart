@@ -7,6 +7,7 @@ import 'package:shifa/setting_page.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_card.dart';
 import 'package:shifa/patient_chat_screen.dart';
+import 'package:shifa/welcome.dart';
 
 // Model
 class Category {
@@ -261,17 +262,29 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             },
           ),
 
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Logout'),
-            onTap: () async {
-              await _firebaseServices.logout();
-              if (!mounted) return;
-              Navigator.of(
-                context,
-              ).pushNamedAndRemoveUntil('/welcome', (route) => false);
-            },
-          ),
+         ListTile(
+  leading: const Icon(Icons.logout, color: Colors.redAccent),
+  title: const Text('Logout'),
+  onTap: () async {
+    // 1️⃣ اقفلي الـ Drawer
+    Navigator.pop(context);
+
+    // 2️⃣ Logout من Firebase
+    await _firebaseServices.logout();
+
+    if (!mounted) return;
+
+    // 3️⃣ استني frame صغير (مهم)
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // 4️⃣ روحي للـ Welcome وامسحي كل اللي قبله
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
+  },
+),
+
         ],
       ),
     );

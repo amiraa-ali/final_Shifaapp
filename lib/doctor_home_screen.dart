@@ -39,9 +39,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     doctorId = _firebaseServices.getCurrentUserId();
 
     if (doctorId != null) {
-      // Load doctor profile
       await _loadDoctorProfile();
-      // Load statistics
       await _loadStatistics();
     }
   }
@@ -49,14 +47,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Future<void> _loadDoctorProfile() async {
     setState(() => isLoadingProfile = true);
 
-    Map<String, dynamic>? profile = await _firebaseServices.getDoctorProfile(
-      doctorId!,
-    );
+    final profile =
+        await _firebaseServices.getDoctorProfile(doctorId!);
 
     if (profile != null) {
       setState(() {
         doctorName = profile['name'] ?? 'Dr. Unknown';
-        specialty = profile['specialization'] ?? 'General Practitioner';
+        specialty =
+            profile['specialization'] ?? 'General Practitioner';
         isLoadingProfile = false;
       });
     } else {
@@ -67,43 +65,43 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Future<void> _loadStatistics() async {
     setState(() => isLoadingStats = true);
 
-    int today = await _firebaseServices.getTodayAppointmentCount(doctorId!);
-    int upcoming = await _firebaseServices.getUpcomingAppointmentCount(
-      doctorId!,
-    );
-    int patients = await _firebaseServices.getTotalPatientsCount(doctorId!);
-    double revenue = await _firebaseServices.getMonthlyRevenue(doctorId!);
+    todayCount =
+        await _firebaseServices.getTodayAppointmentCount(doctorId!);
+    upcomingCount =
+        await _firebaseServices.getUpcomingAppointmentCount(doctorId!);
+    totalPatients =
+        await _firebaseServices.getTotalPatientsCount(doctorId!);
+    monthlyRevenue =
+        await _firebaseServices.getMonthlyRevenue(doctorId!);
 
-    setState(() {
-      todayCount = today;
-      upcomingCount = upcoming;
-      totalPatients = patients;
-      monthlyRevenue = revenue;
-      isLoadingStats = false;
-    });
+    setState(() => isLoadingStats = false);
   }
 
   List<Widget> get pages => [
-    const SizedBox(),
-    const DoctorChatScreen(),
-    DoctorAppointmentScreen(),
-    const DoctorProfile(),
-  ];
+        const SizedBox(),
+        const DoctorChatScreen(),
+        DoctorAppointmentScreen(),
+        const DoctorProfile(),
+      ];
 
   @override
   Widget build(BuildContext context) {
     if (doctorId == null) {
-      return const Scaffold(body: Center(child: Text('Error: Not logged in')));
+      return const Scaffold(
+        body: Center(child: Text('Error: Not logged in')),
+      );
     }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+
+      /// ✅ DRAWER (الجزء الوحيد اللي اتضاف)
+      drawer: _buildDrawer(),
+
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) {
-          setState(() {
-            index = i;
-          });
+          setState(() => index = i);
         },
         height: 60,
         destinations: const [
@@ -119,7 +117,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
+            selectedIcon:
+                Icon(Icons.calendar_today, color: Colors.teal),
             label: 'Appointments',
           ),
           NavigationDestination(
@@ -143,6 +142,111 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             )
           : pages[index],
+    );
+  }
+
+  /// ================== DRAWER ==================
+  Widget _buildDrawer() {
+    String initials = doctorName.isNotEmpty
+        ? doctorName
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
+        : 'DR';
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1ABC9C), Color(0xFF2ECC71)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1ABC9C),
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  doctorName,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 18),
+                ),
+                Text(
+                  specialty,
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+
+          ListTile(
+            leading:
+                const Icon(Icons.home, color: Colors.teal),
+            title: const Text('Home'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => index = 0);
+            },
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.calendar_today, color: Colors.teal),
+            title: const Text('Appointments'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => index = 2);
+            },
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.chat, color: Colors.teal),
+            title: const Text('Chat'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => index = 1);
+            },
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.person, color: Colors.teal),
+            title: const Text('Profile'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => index = 3);
+            },
+          ),
+
+          const Divider(),
+
+          ListTile(
+            leading:
+                const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout'),
+            onTap: () async {
+              Navigator.pop(context);
+              await _firebaseServices.logout();
+            },
+          ),
+        ],
+      ),
     );
   }
 
