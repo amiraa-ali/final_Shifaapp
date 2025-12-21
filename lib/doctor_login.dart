@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
@@ -16,10 +17,51 @@ class _DoctorLoginState extends State<DoctorLogin> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  bool isvisible = false;
+  bool isVisible = false;
   bool isLoading = false;
 
   final FirebaseServices _firebaseServices = FirebaseServices();
+
+  void _showErrorDialog({
+    required String title,
+    required String message,
+    DialogType type = DialogType.error,
+  }) {
+    AwesomeDialog(
+      context: context,
+      dialogType: type,
+      animType: AnimType.scale,
+      title: title,
+      desc: message,
+      btnOkText: 'OK',
+      btnOkColor: Colors.teal,
+      titleTextStyle: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.teal,
+      ),
+      descTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+    ).show();
+  }
+
+  void _showSuccessDialog() {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.success,
+      animType: AnimType.bottomSlide,
+      title: 'Welcome Doctor 👋',
+      desc: 'Login successful. Redirecting...',
+      btnOkColor: Colors.teal,
+      autoHide: const Duration(seconds: 2),
+      onDismissCallback: (_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
+        );
+      },
+    ).show();
+  }
 
   Future<void> _handleLogin() async {
     if (!formKey.currentState!.validate()) return;
@@ -27,37 +69,107 @@ class _DoctorLoginState extends State<DoctorLogin> {
     setState(() => isLoading = true);
 
     try {
-      final role = await _firebaseServices.doctorSignIn(
+      final userCredential = await _firebaseServices.doctorSignIn(
         emailController.text.trim(),
         passwordController.text.trim(),
       );
 
       if (!mounted) return;
 
-      if (role == 'doctor') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("This account is not registered as a doctor"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
+      final userId = userCredential.user?.uid;
+      if (userId == null) throw Exception('User ID not found');
+
+      final role = await _firebaseServices.getUserRole(userId);
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
+      if (role == 'doctor') {
+        _showSuccessDialog();
+      } else {
+        await _firebaseServices.signOut();
+        _showErrorDialog(
+          title: 'Access Denied',
+          message: 'Please use the correct login type.',
+          type: DialogType.warning,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message = 'Login failed';
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account exists with this email';
+          break;
+        case 'wrong-password':
+        case 'invalid-credential':
+          message = 'Incorrect email or password';
+          break;
+        case 'network-request-failed':
+          message = 'Check your internet connection';
+          break;
+      }
+
+      _showErrorDialog(
+        title: 'Login Failed',
+        message: message,
+        type: DialogType.error,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorDialog(
+        title: 'Unexpected Error',
+        message: e.toString(),
+        type: DialogType.error,
       );
     } finally {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (emailController.text.isEmpty) {
+      _showErrorDialog(
+        title: 'Missing Email',
+        message: 'Please enter your email first',
+        type: DialogType.info,
+      );
+      return;
+    }
+
+    if (!emailController.text.contains('@') ||
+        !emailController.text.contains('.')) {
+      _showErrorDialog(
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address',
+        type: DialogType.info,
+      );
+      return;
+    }
+
+    try {
+      await _firebaseServices.sendPasswordResetEmail(
+        emailController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.scale,
+        title: 'Email Sent ✉️',
+        desc: 'Password reset link has been sent to your email',
+        btnOkColor: Colors.teal,
+      ).show();
+    } catch (e) {
+      if (!mounted) return;
+
+      _showErrorDialog(
+        title: 'Error',
+        message: 'Failed to send reset email. Please try again.',
+        type: DialogType.error,
+      );
     }
   }
 
@@ -79,38 +191,40 @@ class _DoctorLoginState extends State<DoctorLogin> {
             key: formKey,
             child: Column(
               children: [
-                Image.asset("images/logo.png", fit: BoxFit.cover),
+                Image.asset(
+                  "images/logo.png",
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.medical_services,
+                    size: 100,
+                    color: Colors.teal,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Doctor Login',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
                 const SizedBox(height: 30),
 
-                // ================= EMAIL =================
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   enabled: !isLoading,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.email),
-                    labelText: "Email",
-                    hintText: "Enter your email",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: const BorderSide(color: Colors.teal),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: const BorderSide(color: Colors.teal),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide:
-                          const BorderSide(color: Colors.teal, width: 2),
-                    ),
+                  decoration: _inputDecoration(
+                    label: "Email",
+                    hint: "Enter your email",
+                    icon: Icons.email,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Email is required";
                     }
-                    if (!value.contains('@') || !value.contains('.')) {
-                      return "Enter valid email address";
+                    if (!value.contains('@')) {
+                      return "Enter a valid email";
                     }
                     return null;
                   },
@@ -118,37 +232,21 @@ class _DoctorLoginState extends State<DoctorLogin> {
 
                 const SizedBox(height: 15),
 
-                // ================= PASSWORD =================
                 TextFormField(
                   controller: passwordController,
-                  obscureText: !isvisible,
+                  obscureText: !isVisible,
                   enabled: !isLoading,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    hintText: "Enter your password",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: const BorderSide(color: Colors.teal),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: const BorderSide(color: Colors.teal),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide:
-                          const BorderSide(color: Colors.teal, width: 2),
-                    ),
-                    suffixIcon: IconButton(
+                  decoration: _inputDecoration(
+                    label: "Password",
+                    hint: "Enter your password",
+                    icon: Icons.lock_outline,
+                    suffix: IconButton(
                       icon: Icon(
-                        isvisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        isVisible ? Icons.visibility : Icons.visibility_off,
                         color: Colors.grey,
                       ),
                       onPressed: () {
-                        setState(() => isvisible = !isvisible);
+                        setState(() => isVisible = !isVisible);
                       },
                     ),
                   ),
@@ -163,113 +261,39 @@ class _DoctorLoginState extends State<DoctorLogin> {
                   },
                 ),
 
-               InkWell(
-                  onTap: () async {
-                    if (emailController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "Please enter your email",
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          backgroundColor: const Color.fromARGB(255, 255, 4, 0),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: InkWell(
+                    onTap: isLoading ? null : _resetPassword,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      child: Text(
+                        "Forgot Password?",
+                        style: TextStyle(
+                          color: isLoading ? Colors.grey : Colors.teal,
+                          fontWeight: FontWeight.w500,
                         ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      await FirebaseAuth.instance.sendPasswordResetEmail(
-                        email: emailController.text.trim(),
-                      );
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "Password reset email sent",
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          backgroundColor: Colors.green,
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "Please enter a valid email",
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          backgroundColor: Colors.red,
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 10, bottom: 20),
-                    alignment: Alignment.topRight,
-                    child: const Text(
-                      "Forget Password ?",
-                      style: TextStyle(fontSize: 14, color: Colors.teal),
+                      ),
                     ),
                   ),
                 ),
 
-
-
-                const SizedBox(height: 15),
-
-                // ================= LOGIN BUTTON =================
                 SizedBox(
                   width: double.infinity,
                   child: MaterialButton(
                     onPressed: isLoading ? null : _handleLogin,
                     color: Colors.teal,
-                    disabledColor: Colors.teal.withOpacity(0.5),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 15),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             "Login",
                             style: TextStyle(
                               fontSize: 16,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
@@ -278,23 +302,19 @@ class _DoctorLoginState extends State<DoctorLogin> {
 
                 const SizedBox(height: 20),
 
-                // ================= SIGN UP =================
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Don't have an account? "),
                     InkWell(
-                      onTap: isLoading
-                          ? null
-                          : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const DoctorSignup(),
-                                ),
-                              );
-                            },
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DoctorSignup(),
+                          ),
+                        );
+                      },
                       child: const Text(
                         "Sign Up",
                         style: TextStyle(
@@ -310,6 +330,21 @@ class _DoctorLoginState extends State<DoctorLogin> {
           ),
         ),
       ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
     );
   }
 }
