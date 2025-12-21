@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_login.dart';
@@ -6,10 +9,10 @@ class DoctorSignup extends StatefulWidget {
   const DoctorSignup({super.key});
 
   @override
-  State<DoctorSignup> createState() => _SignUpPageState();
+  State<DoctorSignup> createState() => _DoctorSignupState();
 }
 
-class _SignUpPageState extends State<DoctorSignup> {
+class _DoctorSignupState extends State<DoctorSignup> {
   final formKey = GlobalKey<FormState>();
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
@@ -19,13 +22,14 @@ class _SignUpPageState extends State<DoctorSignup> {
 
   final FirebaseServices _firebaseServices = FirebaseServices();
 
-  bool isvisible = false;
+  bool isVisible = false;
   bool isLoading = false;
-  
-  // ✅ Selected specialty from dropdown
+  Timer? _emailCheckTimer;
+
+  // Selected specialty from dropdown
   String? selectedSpecialty;
 
-  // ✅ List of specialties (same as categories)
+  // List of specialties
   final List<String> specialties = [
     'General',
     'Cardiology',
@@ -36,74 +40,302 @@ class _SignUpPageState extends State<DoctorSignup> {
     'Psychology',
   ];
 
+  // ==================== ERROR DIALOG ====================
+  void _showErrorDialog({
+    required String title,
+    required String message,
+    DialogType type = DialogType.error,
+  }) {
+    AwesomeDialog(
+      context: context,
+      dialogType: type,
+      animType: AnimType.scale,
+      title: title,
+      desc: message,
+      btnOkText: 'OK',
+      btnOkColor: Colors.teal,
+      titleTextStyle: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.teal,
+      ),
+      descTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+    ).show();
+  }
+
+  // ==================== EMAIL VERIFICATION DIALOG ====================
+  void _showEmailVerificationDialog() {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.info,
+      animType: AnimType.scale,
+      title: 'Verify Your Email 📧',
+      desc:
+          'Please verify your email address to continue. Check your inbox for the verification link.',
+      btnOkText: 'Send Verification Email',
+      btnOkColor: Colors.teal,
+      btnCancelText: 'I\'ll do it later',
+      btnCancelColor: Colors.grey,
+      btnCancelOnPress: () {
+        // Sign out and go to login
+        _firebaseServices.signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorLogin()),
+        );
+      },
+      btnOkOnPress: () {
+        _sendVerificationEmail();
+      },
+      titleTextStyle: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.teal,
+      ),
+      descTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+    ).show();
+  }
+
+  // ==================== SEND VERIFICATION EMAIL ====================
+  Future<void> _sendVerificationEmail() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+
+        if (!mounted) return;
+
+        // Show waiting dialog
+        _showWaitingForVerificationDialog();
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      _showErrorDialog(
+        title: 'Error',
+        message: 'Failed to send verification email. Please try again.',
+        type: DialogType.error,
+      );
+    }
+  }
+
+  // ==================== WAITING FOR VERIFICATION DIALOG ====================
+  void _showWaitingForVerificationDialog() {
+    // Start checking email verification status
+    _startEmailVerificationCheck();
+
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.info,
+      animType: AnimType.scale,
+      title: 'Email Sent! ✉️',
+      desc:
+          'Verification email sent! Please check your inbox and click the verification link. This dialog will close automatically once verified.',
+      btnOkText: 'I Verified My Email',
+      btnOkColor: Colors.teal,
+      btnCancelText: 'Resend Email',
+      btnCancelColor: Colors.orange,
+      btnCancelOnPress: () {
+        _sendVerificationEmail();
+      },
+      btnOkOnPress: () {
+        _checkVerificationManually();
+      },
+      titleTextStyle: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.teal,
+      ),
+      descTextStyle: const TextStyle(fontSize: 14, color: Colors.black87),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+      onDismissCallback: (type) {
+        _emailCheckTimer?.cancel();
+      },
+    ).show();
+  }
+
+  // ==================== START CHECKING EMAIL VERIFICATION ====================
+  void _startEmailVerificationCheck() {
+    _emailCheckTimer?.cancel();
+
+    _emailCheckTimer = Timer.periodic(const Duration(seconds: 3), (
+      timer,
+    ) async {
+      await _checkEmailVerification();
+    });
+  }
+
+  // ==================== CHECK EMAIL VERIFICATION ====================
+  Future<void> _checkEmailVerification() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      await user?.reload();
+      user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && user.emailVerified) {
+        _emailCheckTimer?.cancel();
+
+        if (!mounted) return;
+
+        // Close any open dialogs
+        Navigator.of(context, rootNavigator: true).pop();
+
+        // Show success dialog
+        _showVerificationSuccessDialog();
+      }
+    } catch (e) {
+      print('Error checking verification: $e');
+    }
+  }
+
+  // ==================== CHECK VERIFICATION MANUALLY ====================
+  Future<void> _checkVerificationManually() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      await user?.reload();
+      user = FirebaseAuth.instance.currentUser;
+
+      if (!mounted) return;
+
+      if (user != null && user.emailVerified) {
+        _emailCheckTimer?.cancel();
+        _showVerificationSuccessDialog();
+      } else {
+        _showErrorDialog(
+          title: 'Not Verified Yet',
+          message:
+              'Please check your email and click the verification link, then try again.',
+          type: DialogType.warning,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      _showErrorDialog(
+        title: 'Error',
+        message: 'Failed to check verification status. Please try again.',
+        type: DialogType.error,
+      );
+    }
+  }
+
+  // ==================== VERIFICATION SUCCESS DIALOG ====================
+  void _showVerificationSuccessDialog() {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.success,
+      animType: AnimType.bottomSlide,
+      title: 'Email Verified! ✅',
+      desc:
+          'Your email has been successfully verified. Redirecting to login...',
+      btnOkColor: Colors.teal,
+      autoHide: const Duration(seconds: 3),
+      onDismissCallback: (_) {
+        _firebaseServices.signOut(); // Sign out so they can login fresh
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorLogin()),
+        );
+      },
+    ).show();
+  }
+
+  // ==================== SIGNUP HANDLER ====================
   Future<void> _handleSignup() async {
     if (!formKey.currentState!.validate()) return;
 
-    // ✅ Check if specialty is selected
+    // Check if specialty is selected
     if (selectedSpecialty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a specialty'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      _showErrorDialog(
+        title: 'Missing Specialty',
+        message: 'Please select your medical specialty',
+        type: DialogType.info,
       );
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
+      // Create doctor account
       await _firebaseServices.doctorSignUp(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
         name: fullNameController.text.trim(),
-        specialization: selectedSpecialty!, // ✅ Use selected specialty
-        clinicLocation: String.fromCharCode(
-          65 + fullNameController.text.length % 26,
-        ),
-        fees: 100.0 + fullNameController.text.length * 10,
+        specialization: selectedSpecialty!,
+        clinicLocation: 'Clinic', // Will be updated in profile
+        fees: 200.0, // Default fee, will be updated in profile
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      // Show email verification dialog
+      _showEmailVerificationDialog();
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DoctorLogin()),
-      );
+      String title = 'Signup Failed';
+      String message = 'Failed to create account';
+      DialogType dialogType = DialogType.error;
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          title = 'Email Already Registered';
+          message =
+              'This email is already registered. Please login or use a different email.';
+          dialogType = DialogType.warning;
+          break;
+
+        case 'invalid-email':
+          title = 'Invalid Email';
+          message = 'Please enter a valid email address';
+          dialogType = DialogType.info;
+          break;
+
+        case 'weak-password':
+          title = 'Weak Password';
+          message = 'Password should be at least 6 characters long';
+          dialogType = DialogType.warning;
+          break;
+
+        case 'operation-not-allowed':
+          title = 'Service Unavailable';
+          message =
+              'Email/password accounts are not enabled. Please contact support.';
+          dialogType = DialogType.error;
+          break;
+
+        case 'network-request-failed':
+          title = 'Network Error';
+          message = 'Please check your internet connection and try again';
+          dialogType = DialogType.warning;
+          break;
+
+        default:
+          title = 'Signup Failed';
+          message = 'An error occurred. Please try again.';
+      }
+
+      _showErrorDialog(title: title, message: message, type: dialogType);
     } catch (e) {
       if (!mounted) return;
 
-      String message = e.toString().replaceAll('Exception: ', '');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      _showErrorDialog(
+        title: 'Unexpected Error',
+        message: e.toString().replaceAll('Exception: ', ''),
+        type: DialogType.error,
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   void dispose() {
+    _emailCheckTimer?.cancel();
     fullNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
@@ -118,6 +350,7 @@ class _SignUpPageState extends State<DoctorSignup> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // ================= DECORATIVE CIRCLES =================
           Positioned(
             top: -80,
             left: -60,
@@ -154,6 +387,8 @@ class _SignUpPageState extends State<DoctorSignup> {
               ),
             ),
           ),
+
+          // ================= MAIN CONTENT =================
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(25),
@@ -162,43 +397,45 @@ class _SignUpPageState extends State<DoctorSignup> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Logo
                     SizedBox(
-                      height: 200,
-                      child: Image.asset("images/logo.png", fit: BoxFit.cover),
+                      height: 150,
+                      child: Image.asset(
+                        "images/logo.png",
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.medical_services,
+                            size: 100,
+                            color: Colors.teal,
+                          );
+                        },
+                      ),
                     ),
+                    const SizedBox(height: 10),
                     const Text(
-                      "Create your new account",
+                      "Create Doctor Account",
                       style: TextStyle(
                         color: Colors.teal,
-                        fontSize: 20,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Join our medical platform",
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
                     const SizedBox(height: 30),
 
-                    // Full Name
+                    // ================= FULL NAME =================
                     TextFormField(
                       controller: fullNameController,
                       enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: "Full Name",
-                        hintText: "Enter your full name",
-                        prefixIcon: const Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
+                      decoration: _inputDecoration(
+                        label: "Full Name",
+                        hint: "Dr. Your Full Name",
+                        icon: Icons.person,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -212,106 +449,59 @@ class _SignUpPageState extends State<DoctorSignup> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Email
+                    // ================= EMAIL =================
                     TextFormField(
                       controller: emailController,
-                      enabled: !isLoading,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: "Email",
-                        hintText: "Enter your email",
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
+                      enabled: !isLoading,
+                      decoration: _inputDecoration(
+                        label: "Email",
+                        hint: "Enter your email",
+                        icon: Icons.email_outlined,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return "Email is required";
                         }
                         if (!value.contains('@') || !value.contains('.')) {
-                          return "Enter valid email address";
+                          return "Enter a valid email address";
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
 
-                    // Phone Number
+                    // ================= PHONE =================
                     TextFormField(
                       controller: phoneController,
-                      enabled: !isLoading,
                       keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: "Phone Number",
-                        hintText: "Enter your phone number",
-                        prefixIcon: const Icon(Icons.phone),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
+                      enabled: !isLoading,
+                      decoration: _inputDecoration(
+                        label: "Phone Number",
+                        hint: "Enter your phone number",
+                        icon: Icons.phone,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return "Phone number is required";
                         }
-
                         if (!RegExp(
                           r'^(010|011|012|015)[0-9]{8}$',
                         ).hasMatch(value)) {
-                          return "Enter valid phone number (010 / 011 / 012 / 015)";
+                          return "Enter valid Egyptian phone (010/011/012/015)";
                         }
-
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
 
-                    // ✅ Specialty Dropdown
+                    // ================= SPECIALTY DROPDOWN =================
                     DropdownButtonFormField<String>(
                       value: selectedSpecialty,
-                      decoration: InputDecoration(
-                        labelText: "Specialty",
-                        hintText: "Select your specialty",
-                        prefixIcon: const Icon(Icons.medical_services),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
+                      decoration: _inputDecoration(
+                        label: "Specialty",
+                        hint: "Select your specialty",
+                        icon: Icons.medical_services,
                       ),
                       items: specialties.map((String specialty) {
                         return DropdownMenuItem<String>(
@@ -322,9 +512,7 @@ class _SignUpPageState extends State<DoctorSignup> {
                       onChanged: isLoading
                           ? null
                           : (String? newValue) {
-                              setState(() {
-                                selectedSpecialty = newValue;
-                              });
+                              setState(() => selectedSpecialty = newValue);
                             },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -335,82 +523,53 @@ class _SignUpPageState extends State<DoctorSignup> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Password
+                    // ================= PASSWORD =================
                     TextFormField(
                       controller: passwordController,
-                      obscureText: !isvisible,
+                      obscureText: !isVisible,
                       enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        hintText: "Enter your password",
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
-                        suffixIcon: IconButton(
+                      decoration: _inputDecoration(
+                        label: "Password",
+                        hint: "Enter your password",
+                        icon: Icons.lock_outline,
+                        suffix: IconButton(
                           icon: Icon(
-                            isvisible ? Icons.visibility : Icons.visibility_off,
+                            isVisible ? Icons.visibility : Icons.visibility_off,
                             color: Colors.grey,
                           ),
                           onPressed: () {
-                            setState(() {
-                              isvisible = !isvisible;
-                            });
+                            setState(() => isVisible = !isVisible);
                           },
                         ),
                       ),
                       validator: (value) {
-                        if (value!.isEmpty) return "Password is required";
-                        if (value.length < 6) return "At least 6 characters";
+                        if (value == null || value.isEmpty) {
+                          return "Password is required";
+                        }
+                        if (value.length < 6) {
+                          return "At least 6 characters";
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
 
-                    // Confirm Password
+                    // ================= CONFIRM PASSWORD =================
                     TextFormField(
                       controller: confirmPasswordController,
-                      obscureText: !isvisible,
+                      obscureText: !isVisible,
                       enabled: !isLoading,
-                      decoration: InputDecoration(
-                        labelText: "Confirm password",
-                        prefixIcon: const Icon(Icons.lock_reset),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: Colors.teal),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Colors.teal,
-                            width: 2,
-                          ),
-                        ),
-                        suffixIcon: IconButton(
+                      decoration: _inputDecoration(
+                        label: "Confirm Password",
+                        hint: "Re-enter your password",
+                        icon: Icons.lock_reset,
+                        suffix: IconButton(
                           icon: Icon(
-                            isvisible ? Icons.visibility : Icons.visibility_off,
+                            isVisible ? Icons.visibility : Icons.visibility_off,
                             color: Colors.grey,
                           ),
                           onPressed: () {
-                            setState(() {
-                              isvisible = !isvisible;
-                            });
+                            setState(() => isVisible = !isVisible);
                           },
                         ),
                       ),
@@ -423,7 +582,7 @@ class _SignUpPageState extends State<DoctorSignup> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Sign Up Button
+                    // ================= SIGNUP BUTTON =================
                     SizedBox(
                       width: double.infinity,
                       child: MaterialButton(
@@ -444,9 +603,10 @@ class _SignUpPageState extends State<DoctorSignup> {
                                 ),
                               )
                             : const Text(
-                                "Continue",
+                                "Create Account",
                                 style: TextStyle(
                                   fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
@@ -455,11 +615,11 @@ class _SignUpPageState extends State<DoctorSignup> {
 
                     const SizedBox(height: 20),
 
-                    // Login Link
+                    // ================= LOGIN LINK =================
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Already have an account?"),
+                        const Text("Already have an account? "),
                         InkWell(
                           onTap: isLoading
                               ? null
@@ -467,14 +627,14 @@ class _SignUpPageState extends State<DoctorSignup> {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const DoctorLogin(),
+                                      builder: (_) => const DoctorLogin(),
                                     ),
                                   );
                                 },
-                          child: const Text(
-                            " Login",
+                          child: Text(
+                            "Login",
                             style: TextStyle(
-                              color: Colors.teal,
+                              color: isLoading ? Colors.grey : Colors.teal,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -487,6 +647,37 @@ class _SignUpPageState extends State<DoctorSignup> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ==================== INPUT DECORATION ====================
+  InputDecoration _inputDecoration({
+    required String label,
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: const BorderSide(color: Colors.teal),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: const BorderSide(color: Colors.teal),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: const BorderSide(color: Colors.teal, width: 2),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide(color: Colors.grey.shade300),
       ),
     );
   }
