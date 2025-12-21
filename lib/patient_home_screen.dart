@@ -165,7 +165,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               }
 
               final doctors = snapshot.data!.docs;
-
+              // supabase
               return Column(
                 children: doctors.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
@@ -176,8 +176,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     rating: (data['rating'] ?? 0.0).toDouble(),
                     yearsExp: data['yearsExperience'] ?? 0,
                     location: data['clinicLocation'] ?? 'Clinic',
-                    distance: 5.0, // Default distance
-                    imagePath: 'assets/images/doc1.png',
+                    distance: 5.0,
+                    imageUrl:
+                        data['imageUrl'], // ✅ غيّرتها من imagePath لـ imageUrl
                     price: (data['fees'] ?? 0.0).toDouble(),
                   );
                 }).toList(),
@@ -262,29 +263,28 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             },
           ),
 
-         ListTile(
-  leading: const Icon(Icons.logout, color: Colors.redAccent),
-  title: const Text('Logout'),
-  onTap: () async {
-    // 1️⃣ اقفلي الـ Drawer
-    Navigator.pop(context);
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.redAccent),
+            title: const Text('Logout'),
+            onTap: () async {
+              // 1️⃣ اقفلي الـ Drawer
+              Navigator.pop(context);
 
-    // 2️⃣ Logout من Firebase
-    await _firebaseServices.logout();
+              // 2️⃣ Logout من Firebase
+              await _firebaseServices.logout();
 
-    if (!mounted) return;
+              if (!mounted) return;
 
-    // 3️⃣ استني frame صغير (مهم)
-    await Future.delayed(const Duration(milliseconds: 100));
+              // 3️⃣ استني frame صغير (مهم)
+              await Future.delayed(const Duration(milliseconds: 100));
 
-    // 4️⃣ روحي للـ Welcome وامسحي كل اللي قبله
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      (route) => false,
-    );
-  },
-),
-
+              // 4️⃣ روحي للـ Welcome وامسحي كل اللي قبله
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                (route) => false,
+              );
+            },
+          ),
         ],
       ),
     );

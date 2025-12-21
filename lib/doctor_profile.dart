@@ -1,4 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/welcome.dart';
 
@@ -10,6 +13,7 @@ class DoctorProfile extends StatefulWidget {
 
 class _DoctorProfileState extends State<DoctorProfile> {
   final FirebaseServices _firebaseServices = FirebaseServices();
+  final supabase = Supabase.instance.client;
 
   static const Color primaryIconColor = Color(0xff009f93);
   static const Color lightIconBackground = Color(0xFFE0F7F7);
@@ -25,6 +29,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
   // State management
   bool isLoading = true;
   bool isSaving = false;
+  bool isUploadingImage = false;
   String? doctorId;
 
   // Controllers
@@ -38,6 +43,8 @@ class _DoctorProfileState extends State<DoctorProfile> {
   final feesController = TextEditingController();
 
   String nameDisplay = 'Dr. Loading...';
+  String? profileImageUrl;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -70,6 +77,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
           locationController.text = profile['clinicLocation'] ?? '';
           specializationController.text = profile['specialization'] ?? '';
           feesController.text = (profile['fees'] ?? 0).toString();
+          profileImageUrl = profile['imageUrl'];
 
           // Load additional fields if they exist
           universityController.text = profile['university'] ?? '';
@@ -89,6 +97,189 @@ class _DoctorProfileState extends State<DoctorProfile> {
           SnackBar(
             content: Text('Error loading profile: ${e.toString()}'),
             backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ================= DELETE IMAGE =================
+  Future<void> deleteProfileImage() async {
+    try {
+      if (doctorId == null) throw Exception('User not authenticated');
+
+      // Show confirmation dialog
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Profile Picture?'),
+          content: const Text('Are you sure you want to remove your profile picture?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      setState(() => isUploadingImage = true);
+
+      // Find all files in doctor's folder
+      final files = await supabase.storage
+          .from('doctor-images')
+          .list(path: doctorId!);
+
+      // Delete all profile images (in case of different extensions)
+      for (var file in files) {
+        if (file.name.startsWith('profile.')) {
+          await supabase.storage
+              .from('doctor-images')
+              .remove(['$doctorId/${file.name}']);
+        }
+      }
+
+      // Remove from Firestore
+      await _firebaseServices.updateDoctorProfile(doctorId!, {
+        'imageUrl': null,
+      });
+
+      setState(() {
+        profileImageUrl = null;
+        isUploadingImage = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Profile picture removed'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => isUploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Delete failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ================= PICK & UPLOAD IMAGE =================
+  Future<void> pickProfileImage() async {
+    try {
+      // STEP 1: User picks image from gallery
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (image == null) return;
+
+      setState(() => isUploadingImage = true);
+
+      // ✅ Security Check
+      if (doctorId == null) {
+        throw Exception('⚠️ You must be logged in to upload images');
+      }
+
+      // STEP 2: Flutter reads image as bytes
+      final Uint8List bytes = await image.readAsBytes();
+      final ext = image.name.split('.').last.toLowerCase();
+      
+      // ✅ Validate file extension
+      if (!['jpg', 'jpeg', 'png', 'webp'].contains(ext)) {
+        throw Exception('Invalid image format. Use JPG, PNG, or WebP');
+      }
+
+      // ✅ Validate file size (max 5MB)
+      if (bytes.length > 5 * 1024 * 1024) {
+        throw Exception('Image too large. Max size is 5MB');
+      }
+
+      // ✅ STEP 2.5: Delete old profile images before uploading new one
+      try {
+        final files = await supabase.storage
+            .from('doctor-images')
+            .list(path: doctorId!);
+
+        // Delete all old profile images (any extension)
+        final filesToDelete = files
+            .where((file) => file.name.startsWith('profile.'))
+            .map((file) => '$doctorId/${file.name}')
+            .toList();
+
+        if (filesToDelete.isNotEmpty) {
+          await supabase.storage
+              .from('doctor-images')
+              .remove(filesToDelete);
+        }
+      } catch (e) {
+        debugPrint('No old images to delete: $e');
+      }
+
+      // Create file path: {doctorId}/profile.{ext}
+      final filePath = '$doctorId/profile.$ext';
+
+      // STEP 3: Upload to Supabase Storage (bucket: doctor-images)
+      await supabase.storage.from('doctor-images').uploadBinary(
+            filePath,
+            bytes,
+            fileOptions: FileOptions(
+              upsert: true,
+              contentType: 'image/$ext',
+            ),
+          );
+
+      // STEP 4: Get public URL
+      final publicUrl =
+          supabase.storage.from('doctor-images').getPublicUrl(filePath);
+
+      // Add cache-busting timestamp
+      final finalUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+
+      // STEP 5: Save URL to Firebase Firestore
+      await _firebaseServices.updateDoctorProfile(doctorId!, {
+        'imageUrl': finalUrl,
+      });
+
+      // STEP 6: Display image in UI
+      setState(() {
+        profileImageUrl = finalUrl;
+        isUploadingImage = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Profile image updated successfully!'),
+            backgroundColor: Colors.teal,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => isUploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -421,13 +612,72 @@ class _DoctorProfileState extends State<DoctorProfile> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: changeAvatar,
-              child: CircleAvatar(
-                radius: 45,
-                backgroundColor: avatarColor,
-                child: const Icon(Icons.person, size: 40, color: Colors.white),
-              ),
+            // Profile Image with Delete Button
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                GestureDetector(
+                  onTap: isUploadingImage ? null : pickProfileImage,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white24,
+                        backgroundImage: profileImageUrl != null
+                            ? NetworkImage(profileImageUrl!)
+                            : null,
+                        child: profileImageUrl == null
+                            ? const Icon(Icons.camera_alt,
+                                color: Colors.white, size: 30)
+                            : null,
+                      ),
+                      if (isUploadingImage)
+                        const Positioned.fill(
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Delete button (only show when image exists)
+                if (profileImageUrl != null && !isUploadingImage)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: deleteProfileImage,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade600,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.delete_forever,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
 
             const SizedBox(height: 15),

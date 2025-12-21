@@ -172,8 +172,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     int center = displayCount ~/ 2;
     startIndex = dates.indexOf(date) - center;
     if (startIndex < 0) startIndex = 0;
-    if (startIndex + displayCount > dates.length)
+    if (startIndex + displayCount > dates.length) {
       startIndex = dates.length - displayCount;
+    }
   }
 
   @override
@@ -605,8 +606,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
               onPressed: () {
                 if (currentStep < 3) {
                   if (currentStep == 2 && cardSelected) {
-                    if (_formKey.currentState!.validate())
+                    if (_formKey.currentState!.validate()) {
                       setState(() => currentStep++);
+                    }
                   } else {
                     setState(() => currentStep++);
                   }

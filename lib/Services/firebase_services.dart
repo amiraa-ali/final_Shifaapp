@@ -1,11 +1,10 @@
-// lib/services/firebase_services.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
 
   // ==================== AUTH & USER STATE ====================
 
@@ -133,6 +132,22 @@ Future<UserCredential> doctorSignUp({
     rethrow;
   }
 }
+/////////////////////// Check if email exists in doctors collection
+Future<bool> emailExistsAsDoctor(String email) async {
+  try {
+    final query = await _firestore
+        .collection('doctors')
+        .where('email', isEqualTo: email.trim().toLowerCase())
+        .limit(1)
+        .get();
+
+    return query.docs.isNotEmpty;
+  } catch (e) {
+    print('Check doctor email error: $e');
+    return false;
+  }
+}
+
   // ==================== PATIENT AUTH ====================
 
  Future<String> patientSignIn(String email, String password) async {

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_appointment_screen.dart';
+import 'package:shifa/setting_page.dart';
+import 'package:shifa/welcome.dart';
 import 'doctor_chat_screen.dart';
 import 'doctor_profile.dart';
 
@@ -15,6 +17,8 @@ class DoctorHomeScreen extends StatefulWidget {
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   final FirebaseServices _firebaseServices = FirebaseServices();
+  final GlobalKey<ScaffoldState> _scaffoldKey =
+      GlobalKey<ScaffoldState>(); // ✅ ضيفي السطر ده
   int index = 0;
 
   String doctorName = 'Dr. Loading...';
@@ -47,14 +51,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Future<void> _loadDoctorProfile() async {
     setState(() => isLoadingProfile = true);
 
-    final profile =
-        await _firebaseServices.getDoctorProfile(doctorId!);
+    final profile = await _firebaseServices.getDoctorProfile(doctorId!);
 
     if (profile != null) {
       setState(() {
         doctorName = profile['name'] ?? 'Dr. Unknown';
-        specialty =
-            profile['specialization'] ?? 'General Practitioner';
+        specialty = profile['specialization'] ?? 'General Practitioner';
         isLoadingProfile = false;
       });
     } else {
@@ -65,37 +67,32 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Future<void> _loadStatistics() async {
     setState(() => isLoadingStats = true);
 
-    todayCount =
-        await _firebaseServices.getTodayAppointmentCount(doctorId!);
-    upcomingCount =
-        await _firebaseServices.getUpcomingAppointmentCount(doctorId!);
-    totalPatients =
-        await _firebaseServices.getTotalPatientsCount(doctorId!);
-    monthlyRevenue =
-        await _firebaseServices.getMonthlyRevenue(doctorId!);
+    todayCount = await _firebaseServices.getTodayAppointmentCount(doctorId!);
+    upcomingCount = await _firebaseServices.getUpcomingAppointmentCount(
+      doctorId!,
+    );
+    totalPatients = await _firebaseServices.getTotalPatientsCount(doctorId!);
+    monthlyRevenue = await _firebaseServices.getMonthlyRevenue(doctorId!);
 
     setState(() => isLoadingStats = false);
   }
 
   List<Widget> get pages => [
-        const SizedBox(),
-        const DoctorChatScreen(),
-        DoctorAppointmentScreen(),
-        const DoctorProfile(),
-      ];
+    const SizedBox(),
+    const DoctorChatScreen(),
+    DoctorAppointmentScreen(),
+    const DoctorProfile(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     if (doctorId == null) {
-      return const Scaffold(
-        body: Center(child: Text('Error: Not logged in')),
-      );
+      return const Scaffold(body: Center(child: Text('Error: Not logged in')));
     }
 
     return Scaffold(
+      key: _scaffoldKey, // ✅ ضيفي السطر ده
       backgroundColor: Colors.grey[50],
-
-      /// ✅ DRAWER (الجزء الوحيد اللي اتضاف)
       drawer: _buildDrawer(),
 
       bottomNavigationBar: NavigationBar(
@@ -117,8 +114,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon:
-                Icon(Icons.calendar_today, color: Colors.teal),
+            selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
             label: 'Appointments',
           ),
           NavigationDestination(
@@ -148,12 +144,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   /// ================== DRAWER ==================
   Widget _buildDrawer() {
     String initials = doctorName.isNotEmpty
-        ? doctorName
-            .split(' ')
-            .map((e) => e[0])
-            .take(2)
-            .join()
-            .toUpperCase()
+        ? doctorName.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
         : 'DR';
 
     return Drawer(
@@ -185,64 +176,49 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 const SizedBox(height: 8),
                 Text(
                   doctorName,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 18),
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 Text(
                   specialty,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
           ),
 
           ListTile(
-            leading:
-                const Icon(Icons.home, color: Colors.teal),
+            leading: const Icon(Icons.home, color: Colors.teal),
             title: const Text('Home'),
             onTap: () {
-              Navigator.pop(context);
-              setState(() => index = 0);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DoctorHomeScreen(),
+                ),
+              );
             },
           ),
           ListTile(
-            leading:
-                const Icon(Icons.calendar_today, color: Colors.teal),
-            title: const Text('Appointments'),
+            leading: const Icon(Icons.calendar_today, color: Colors.teal),
+            title: const Text('Setting'),
             onTap: () {
-              Navigator.pop(context);
-              setState(() => index = 2);
-            },
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.chat, color: Colors.teal),
-            title: const Text('Chat'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() => index = 1);
-            },
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.person, color: Colors.teal),
-            title: const Text('Profile'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() => index = 3);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
             },
           ),
 
           const Divider(),
 
           ListTile(
-            leading:
-                const Icon(Icons.logout, color: Colors.red),
+            leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout'),
             onTap: () async {
-              Navigator.pop(context);
-              await _firebaseServices.logout();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+              );
             },
           ),
         ],
@@ -264,32 +240,61 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ========== ROW 1: Menu + Info + Avatar ==========
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Welcome back,',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                // Menu Button
+                GestureDetector(
+                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    Text(
-                      isLoadingProfile ? 'Loading...' : doctorName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 24,
-                      ),
+                    child: const Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: 24,
                     ),
-                    Text(
-                      isLoadingProfile ? 'Loading...' : specialty,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ],
+                  ),
                 ),
+
+                const SizedBox(width: 12),
+
+                // Welcome + Name + Specialty
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Welcome back,',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                      Text(
+                        isLoadingProfile ? 'Loading...' : doctorName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isLoadingProfile ? 'Loading...' : specialty,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Avatar
                 CircleAvatar(
-                  radius: 20,
+                  radius: 24,
                   backgroundColor: Colors.white,
                   child: Text(
                     doctorName
@@ -300,6 +305,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     style: const TextStyle(
                       color: Color(0xFF1ABC9C),
                       fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
                   ),
                 ),

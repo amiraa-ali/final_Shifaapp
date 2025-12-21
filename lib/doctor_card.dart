@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'details.dart';
-
+// ⚠️ لو Package مش موجود، استخدمي Image.network بدله
+// import 'package:cached_network_image/cached_network_image.dart';
 /// ======================
-/// DOCTOR CARD WITH FIREBASE SUPPORT
+/// DOCTOR CARD WITH FIREBASE SUPPORT + SUPABASE IMAGES
 /// ======================
 class DoctorCard extends StatelessWidget {
   final String doctorId; // Firebase document ID
@@ -12,7 +13,7 @@ class DoctorCard extends StatelessWidget {
   final int yearsExp;
   final String location;
   final double distance;
-  final String imagePath;
+  final String? imageUrl; // Changed from imagePath to imageUrl (nullable)
   final double price;
 
   const DoctorCard({
@@ -24,7 +25,7 @@ class DoctorCard extends StatelessWidget {
     required this.yearsExp,
     required this.location,
     required this.distance,
-    required this.imagePath,
+    this.imageUrl, // Can be null
     required this.price,
   });
 
@@ -66,25 +67,8 @@ class DoctorCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // IMAGE
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    imagePath,
-                    width: 80,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 80,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.person, size: 40),
-                    ),
-                  ),
-                ),
+                // IMAGE FROM SUPABASE OR DEFAULT
+                _buildDoctorImage(),
                 const SizedBox(width: 15),
 
                 // INFO
@@ -196,6 +180,56 @@ class DoctorCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ================= BUILD DOCTOR IMAGE =================
+  Widget _buildDoctorImage() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: imageUrl != null && imageUrl!.isNotEmpty
+          ? Image.network(
+              imageUrl!,
+              width: 80,
+              height: 100,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 80,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.teal,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) =>
+                  _buildDefaultAvatar(),
+            )
+          : _buildDefaultAvatar(),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      width: 80,
+      height: 100,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2ECC71), Color(0xFF1ABC9C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(Icons.person, size: 40, color: Colors.white),
     );
   }
 }

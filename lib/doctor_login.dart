@@ -163,31 +163,70 @@ class _DoctorLoginState extends State<DoctorLogin> {
                   },
                 ),
 
-                // ================= FORGOT PASSWORD =================
-              InkWell(
+               InkWell(
                   onTap: () async {
-                    if (emailController.text=="") {
+                    if (emailController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Please enter your email"),
+                        SnackBar(
+                          content: const Text(
+                            "Please enter your email",
+                            style: TextStyle(fontSize: 13),
+                          ),
+                          backgroundColor: const Color.fromARGB(255, 255, 4, 0),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       );
                       return;
                     }
+
                     try {
                       await FirebaseAuth.instance.sendPasswordResetEmail(
-                        email: emailController.text,
+                        email: emailController.text.trim(),
                       );
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Password reset email has been sent"),
+                        SnackBar(
+                          content: const Text(
+                            "Password reset email sent",
+                            style: TextStyle(fontSize: 13),
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       );
                     } catch (e) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("please Enter Valid email"),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            "Please enter a valid email",
+                            style: TextStyle(fontSize: 13),
+                          ),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       );
                     }
@@ -201,6 +240,7 @@ class _DoctorLoginState extends State<DoctorLogin> {
                     ),
                   ),
                 ),
+
 
 
                 const SizedBox(height: 15),

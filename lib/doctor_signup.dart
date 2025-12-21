@@ -15,16 +15,41 @@ class _SignUpPageState extends State<DoctorSignup> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  final specialtyController = TextEditingController();
   final phoneController = TextEditingController();
 
   final FirebaseServices _firebaseServices = FirebaseServices();
 
   bool isvisible = false;
   bool isLoading = false;
+  
+  // ✅ Selected specialty from dropdown
+  String? selectedSpecialty;
+
+  // ✅ List of specialties (same as categories)
+  final List<String> specialties = [
+    'General',
+    'Cardiology',
+    'Dermatology',
+    'Neurology',
+    'Pediatrics',
+    'Orthopedics',
+    'Psychology',
+  ];
 
   Future<void> _handleSignup() async {
     if (!formKey.currentState!.validate()) return;
+
+    // ✅ Check if specialty is selected
+    if (selectedSpecialty == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a specialty'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       isLoading = true;
@@ -35,11 +60,11 @@ class _SignUpPageState extends State<DoctorSignup> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
         name: fullNameController.text.trim(),
-        specialization: specialtyController.text.trim(),
+        specialization: selectedSpecialty!, // ✅ Use selected specialty
         clinicLocation: String.fromCharCode(
           65 + fullNameController.text.length % 26,
-        ), // Dummy location
-        fees: 100.0 + fullNameController.text.length * 10, // Dummy
+        ),
+        fees: 100.0 + fullNameController.text.length * 10,
       );
 
       if (!mounted) return;
@@ -83,7 +108,6 @@ class _SignUpPageState extends State<DoctorSignup> {
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
-    specialtyController.dispose();
     phoneController.dispose();
     super.dispose();
   }
@@ -266,13 +290,12 @@ class _SignUpPageState extends State<DoctorSignup> {
                     ),
                     const SizedBox(height: 15),
 
-                    // Specialty
-                    TextFormField(
-                      controller: specialtyController,
-                      enabled: !isLoading,
+                    // ✅ Specialty Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedSpecialty,
                       decoration: InputDecoration(
                         labelText: "Specialty",
-                        hintText: "e.g., Cardiology, Pediatrics",
+                        hintText: "Select your specialty",
                         prefixIcon: const Icon(Icons.medical_services),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -290,9 +313,22 @@ class _SignUpPageState extends State<DoctorSignup> {
                           ),
                         ),
                       ),
+                      items: specialties.map((String specialty) {
+                        return DropdownMenuItem<String>(
+                          value: specialty,
+                          child: Text(specialty),
+                        );
+                      }).toList(),
+                      onChanged: isLoading
+                          ? null
+                          : (String? newValue) {
+                              setState(() {
+                                selectedSpecialty = newValue;
+                              });
+                            },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return "Specialty is required";
+                          return "Please select a specialty";
                         }
                         return null;
                       },

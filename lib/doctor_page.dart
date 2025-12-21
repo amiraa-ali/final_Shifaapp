@@ -160,41 +160,38 @@ class _DoctorsPageState extends State<DoctorsPage> {
                 // Doctors list
                 final doctors = snapshot.data!.docs;
 
-                return ListView.builder(
-                  itemCount: doctors.length,
-                  padding: const EdgeInsets.only(bottom: 20),
-                  itemBuilder: (context, index) {
-                    final doctorDoc = doctors[index];
-                    final doctorData = doctorDoc.data() as Map<String, dynamic>;
+              return ListView.builder(
+  itemCount: doctors.length,
+  padding: const EdgeInsets.only(bottom: 20),
+  itemBuilder: (context, index) {
+    final doctorDoc = doctors[index];
+    final doctorData = doctorDoc.data() as Map<String, dynamic>;
 
-                    // Extract doctor information with defaults
-                    final doctorId = doctorDoc.id;
-                    final name = doctorData['name'] ?? 'Doctor';
-                    final specialty = doctorData['specialization'] ?? 'General';
-                    final location = doctorData['clinicLocation'] ?? 'Clinic';
-                    final rating = (doctorData['rating'] ?? 0.0).toDouble();
-                    final yearsExp = (doctorData['yearsExperience'] ?? 0);
-                    final price = (doctorData['fees'] ?? 0.0).toDouble();
+    // Extract doctor information with defaults
+    final doctorId = doctorDoc.id;
+    final name = doctorData['name'] ?? 'Doctor';
+    final specialty = doctorData['specialization'] ?? 'General';
+    final location = doctorData['clinicLocation'] ?? 'Clinic';
+    final rating = (doctorData['rating'] ?? 0.0).toDouble();
+    final yearsExp = (doctorData['yearsExperience'] ?? 0);
+    final price = (doctorData['fees'] ?? 0.0).toDouble();
+    final imageUrl = doctorData['imageUrl']; // ✅ من Firebase
 
-                    // For now, using placeholder values for distance and image
-                    // You can add these fields to your Firebase doctor documents
-                    final distance = 5.0; // Default distance
-                    final imagePath =
-                        'assets/doctors/default.png'; // Default image
+    final distance = 5.0; // Default distance
 
-                    return DoctorCard(
-                      doctorId: doctorId,
-                      name: name,
-                      specialty: specialty,
-                      rating: rating,
-                      yearsExp: yearsExp,
-                      location: location,
-                      distance: distance,
-                      imagePath: imagePath,
-                      price: price,
-                    );
-                  },
-                );
+    return DoctorCard(
+      doctorId: doctorId,
+      name: name,
+      specialty: specialty,
+      rating: rating,
+      yearsExp: yearsExp,
+      location: location,
+      distance: distance,
+      imageUrl: imageUrl, // ✅ غيّرتها من imagePath لـ imageUrl
+      price: price,
+    );
+  },
+);
               },
             ),
           ),
