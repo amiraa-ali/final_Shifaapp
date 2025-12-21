@@ -180,8 +180,7 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
           );
         }
 
-        // Empty state
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -201,7 +200,44 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
           );
         }
 
-        final appointments = snapshot.data!.docs;
+        // Filter appointments based on tab type and status
+        final allAppointments = snapshot.data!.docs;
+        final appointments = allAppointments.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = data['status'] ?? 'upcoming';
+          
+          if (tabType == 'today') {
+            return status == 'upcoming';
+          } else if (tabType == 'upcoming') {
+            return status == 'upcoming';
+          } else if (tabType == 'completed') {
+            return status == 'completed';
+          } else if (tabType == 'cancelled') {
+            return status == 'cancelled';
+          }
+          return true;
+        }).toList();
+
+        // Empty state after filtering
+        if (appointments.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _getEmptyMessage(tabType),
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
