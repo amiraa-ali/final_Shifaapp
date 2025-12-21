@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class FirebaseServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ==================== AUTH & USER STATE ====================
 
@@ -54,165 +56,291 @@ class FirebaseServices {
 
   /// Sign out
   Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await FacebookAuth.instance.logOut();
     await _auth.signOut();
   }
 
   /// Logout (alternative name)
   Future<void> logout() async {
-    await _auth.signOut();
+    await signOut();
+  }
+
+  // ==================== SOCIAL AUTHENTICATION ====================
+
+  /// Sign in with Google
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        return null;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      print('Google sign in error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign in with Facebook
+  Future<UserCredential?> signInWithFacebook() async {
+    try {
+      // Trigger the sign-in flow
+      final LoginResult result = await FacebookAuth.instance.login();
+
+      if (result.status == LoginStatus.success) {
+        // Create a credential from the access token
+        final OAuthCredential facebookAuthCredential =
+            FacebookAuthProvider.credential(result.accessToken!.token);
+
+        // Sign in to Firebase with the Facebook credential
+        return await _auth.signInWithCredential(facebookAuthCredential);
+      } else if (result.status == LoginStatus.cancelled) {
+        // User cancelled
+        return null;
+      } else {
+        throw Exception('Facebook login failed: ${result.message}');
+      }
+    } catch (e) {
+      print('Facebook sign in error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign in with LinkedIn (using OAuth)
+  /// Note: LinkedIn requires OAuth setup and web authentication
+  Future<UserCredential?> signInWithLinkedIn() async {
+    try {
+      // LinkedIn OAuth Provider
+      final OAuthProvider linkedInProvider = OAuthProvider('oidc.linkedin');
+
+      // Sign in with LinkedIn
+      return await _auth.signInWithProvider(linkedInProvider);
+    } catch (e) {
+      print('LinkedIn sign in error: $e');
+      rethrow;
+    }
+  }
+
+  /// Create patient account from social auth
+  Future<bool> createPatientFromSocialAuth(User user) async {
+    try {
+      // Check if patient already exists
+      final doc = await _firestore.collection('patients').doc(user.uid).get();
+
+      if (!doc.exists) {
+        // Create new patient document
+        await _firestore.collection('patients').doc(user.uid).set({
+          'patientId': user.uid,
+          'name': user.displayName ?? 'Patient',
+          'email': user.email ?? '',
+          'phone': user.phoneNumber ?? '',
+          'photoUrl': user.photoURL ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print('Create patient from social auth error: $e');
+      return false;
+    }
+  }
+
+  /// Create doctor account from social auth
+  Future<bool> createDoctorFromSocialAuth(
+    User user,
+    String specialization,
+  ) async {
+    try {
+      // Check if doctor already exists
+      final doc = await _firestore.collection('doctors').doc(user.uid).get();
+
+      if (!doc.exists) {
+        // Create new doctor document
+        await _firestore.collection('doctors').doc(user.uid).set({
+          'doctorId': user.uid,
+          'name': user.displayName ?? 'Doctor',
+          'email': user.email ?? '',
+          'specialization': specialization,
+          'clinicLocation': 'Clinic',
+          'fees': 200.0,
+          'phone': user.phoneNumber ?? '',
+          'photoUrl': user.photoURL ?? '',
+          'rating': 0.0,
+          'yearsExperience': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print('Create doctor from social auth error: $e');
+      return false;
+    }
   }
 
   // ==================== DOCTOR AUTH ====================
 
-  Future<String> doctorSignIn(String email, String password) async {
-  try {
-    final userCredential = await _auth.signInWithEmailAndPassword(
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    );
+  Future<UserCredential> doctorSignIn(String email, String password) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      );
 
-    print("AUTH SUCCESS UID: ${userCredential.user!.uid}");
+      print("AUTH SUCCESS UID: ${userCredential.user!.uid}");
 
-    // ✅ تأكيد إنه دكتور
-    final doc = await _firestore
-        .collection('doctors')
-        .doc(userCredential.user!.uid)
-        .get();
+      // Verify user is a doctor
+      final doc = await _firestore
+          .collection('doctors')
+          .doc(userCredential.user!.uid)
+          .get();
 
-    if (!doc.exists) {
-      await _auth.signOut();
-      throw Exception('This account is not registered as a doctor');
+      if (!doc.exists) {
+        await _auth.signOut();
+        throw Exception('This account is not registered as a doctor');
+      }
+
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      print("AUTH ERROR CODE: ${e.code}");
+      print("AUTH ERROR MESSAGE: ${e.message}");
+      rethrow;
+    } catch (e) {
+      print('Doctor sign in error: $e');
+      rethrow;
     }
-
-    // ✅ المهم هنا
-    return 'doctor';
-  } on FirebaseAuthException catch (e) {
-    print("AUTH ERROR CODE: ${e.code}");
-    print("AUTH ERROR MESSAGE: ${e.message}");
-    throw Exception(e.message);
-  } catch (e) {
-    print('Doctor sign in error: $e');
-    rethrow;
   }
-}
 
-Future<UserCredential> doctorSignUp({
-  required String email,
-  required String password,
-  required String name,
-  required String specialization,
-  required String clinicLocation,
-  required double fees,
-}) async {
-  try {
-    UserCredential userCredential =
-        await _auth.createUserWithEmailAndPassword(
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    );
+  Future<UserCredential> doctorSignUp({
+    required String email,
+    required String password,
+    required String name,
+    required String specialization,
+    required String clinicLocation,
+    required double fees,
+  }) async {
+    try {
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: email.trim().toLowerCase(),
+            password: password.trim(),
+          );
 
-    await _firestore
-        .collection('doctors')
-        .doc(userCredential.user!.uid)
-        .set({
-      'doctorId': userCredential.user!.uid,
-      'name': name,
-      'email': email.trim().toLowerCase(),
-      'specialization': specialization,
-      'clinicLocation': clinicLocation,
-      'fees': fees,
-      'rating': 0.0,
-      'yearsExperience': 0,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      await _firestore.collection('doctors').doc(userCredential.user!.uid).set({
+        'doctorId': userCredential.user!.uid,
+        'name': name,
+        'email': email.trim().toLowerCase(),
+        'specialization': specialization,
+        'clinicLocation': clinicLocation,
+        'fees': fees,
+        'rating': 0.0,
+        'yearsExperience': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    return userCredential;
-  } catch (e) {
-    print('Doctor sign up error: $e');
-    rethrow;
+      return userCredential;
+    } catch (e) {
+      print('Doctor sign up error: $e');
+      rethrow;
+    }
   }
-}
-/////////////////////// Check if email exists in doctors collection
-Future<bool> emailExistsAsDoctor(String email) async {
-  try {
-    final query = await _firestore
-        .collection('doctors')
-        .where('email', isEqualTo: email.trim().toLowerCase())
-        .limit(1)
-        .get();
 
-    return query.docs.isNotEmpty;
-  } catch (e) {
-    print('Check doctor email error: $e');
-    return false;
+  /// Check if email exists in doctors collection
+  Future<bool> emailExistsAsDoctor(String email) async {
+    try {
+      final query = await _firestore
+          .collection('doctors')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .limit(1)
+          .get();
+
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      print('Check doctor email error: $e');
+      return false;
+    }
   }
-}
 
   // ==================== PATIENT AUTH ====================
 
- Future<String> patientSignIn(String email, String password) async {
-  try {
-    final userCredential = await _auth.signInWithEmailAndPassword(
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    );
+  Future<UserCredential> patientSignIn(String email, String password) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      );
 
-    print("PATIENT AUTH SUCCESS UID: ${userCredential.user!.uid}");
+      print("PATIENT AUTH SUCCESS UID: ${userCredential.user!.uid}");
 
-    // ✅ تأكيد إنه Patient
-    final doc = await _firestore
-        .collection('patients')
-        .doc(userCredential.user!.uid)
-        .get();
+      // Verify user is a patient
+      final doc = await _firestore
+          .collection('patients')
+          .doc(userCredential.user!.uid)
+          .get();
 
-    if (!doc.exists) {
-      await _auth.signOut();
-      throw Exception('This account is not registered as a patient');
+      if (!doc.exists) {
+        await _auth.signOut();
+        throw Exception('This account is not registered as a patient');
+      }
+
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      print("PATIENT AUTH ERROR CODE: ${e.code}");
+      print("PATIENT AUTH ERROR MESSAGE: ${e.message}");
+      rethrow;
+    } catch (e) {
+      print('Patient sign in error: $e');
+      rethrow;
     }
-
-    // ✅ المهم
-    return 'patient';
-  } on FirebaseAuthException catch (e) {
-    print("PATIENT AUTH ERROR CODE: ${e.code}");
-    print("PATIENT AUTH ERROR MESSAGE: ${e.message}");
-    throw Exception(e.message);
-  } catch (e) {
-    print('Patient sign in error: $e');
-    rethrow;
   }
-}
 
-Future<UserCredential> patientSignUp({
-  required String email,
-  required String password,
-  required String name,
-  required String phone,
-}) async {
-  try {
-    UserCredential userCredential =
-        await _auth.createUserWithEmailAndPassword(
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-    );
+  Future<UserCredential> patientSignUp({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+  }) async {
+    try {
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: email.trim().toLowerCase(),
+            password: password.trim(),
+          );
 
-    await _firestore
-        .collection('patients')
-        .doc(userCredential.user!.uid)
-        .set({
-      'patientId': userCredential.user!.uid,
-      'name': name,
-      'email': email.trim().toLowerCase(),
-      'phone': phone,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      await _firestore
+          .collection('patients')
+          .doc(userCredential.user!.uid)
+          .set({
+            'patientId': userCredential.user!.uid,
+            'name': name,
+            'email': email.trim().toLowerCase(),
+            'phone': phone,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
-    return userCredential;
-  } catch (e) {
-    print('Patient sign up error: $e');
-    rethrow;
+      return userCredential;
+    } catch (e) {
+      print('Patient sign up error: $e');
+      rethrow;
+    }
   }
-}
-
 
   // ==================== DOCTOR PROFILE ====================
 
@@ -244,12 +372,10 @@ Future<UserCredential> patientSignUp({
 
   // ==================== DOCTOR QUERIES ====================
 
-  /// Get all doctors
   Stream<QuerySnapshot> getAllDoctors() {
     return _firestore.collection('doctors').snapshots();
   }
 
-  /// Get doctors by specialty
   Stream<QuerySnapshot> getDoctorsBySpecialty(String specialty) {
     return _firestore
         .collection('doctors')
@@ -257,7 +383,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get single doctor by ID
   Future<Map<String, dynamic>?> getDoctorById(String doctorId) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -271,7 +396,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Search doctors by name
   Stream<QuerySnapshot> searchDoctorsByName(String searchQuery) {
     String searchEnd = '$searchQuery\uf8ff';
     return _firestore
@@ -281,7 +405,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get top-rated doctors
   Stream<QuerySnapshot> getTopRatedDoctors({int limit = 10}) {
     return _firestore
         .collection('doctors')
@@ -292,7 +415,6 @@ Future<UserCredential> patientSignUp({
 
   // ==================== APPOINTMENTS ====================
 
-  /// Create appointment with enhanced data
   Future<String?> createAppointment({
     required String patientId,
     required String doctorId,
@@ -307,7 +429,6 @@ Future<UserCredential> patientSignUp({
     String? doctorSpecialty,
   }) async {
     try {
-      // Get patient and doctor info if not provided
       if (patientName == null) {
         final patientData = await getPatientInfo(patientId);
         patientName = patientData?['name'] ?? 'Patient';
@@ -345,7 +466,8 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Get all appointments for a doctor
+  // ==================== APPOINTMENTS QUERIES ====================
+
   Stream<QuerySnapshot> getDoctorAppointments(String doctorId) {
     return _firestore
         .collection('appointments')
@@ -354,7 +476,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get appointments for a patient
   Stream<QuerySnapshot> getPatientAppointments(String patientId) {
     return _firestore
         .collection('appointments')
@@ -363,7 +484,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get today's appointments for doctor
   Stream<QuerySnapshot> getTodayAppointments(String doctorId) {
     DateTime now = DateTime.now();
     DateTime start = DateTime(now.year, now.month, now.day);
@@ -381,7 +501,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get upcoming appointments for patient
   Stream<QuerySnapshot> getUpcomingPatientAppointments(String patientId) {
     DateTime now = DateTime.now();
     return _firestore
@@ -396,7 +515,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get upcoming appointments for doctor
   Stream<QuerySnapshot> getUpcomingAppointments(String doctorId) {
     return _firestore
         .collection('appointments')
@@ -406,47 +524,42 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get completed appointments for doctor
   Stream<QuerySnapshot> getCompletedAppointments(String doctorId) {
     return _firestore
         .collection('appointments')
         .where('doctorId', isEqualTo: doctorId)
         .where('status', isEqualTo: 'completed')
-        .orderBy('appointmentDate', descending: false)
+        .orderBy('appointmentDate', descending: true)
         .snapshots();
   }
 
-  /// Get cancelled appointments for doctor
   Stream<QuerySnapshot> getCancelledAppointments(String doctorId) {
     return _firestore
         .collection('appointments')
         .where('doctorId', isEqualTo: doctorId)
         .where('status', isEqualTo: 'cancelled')
-        .orderBy('appointmentDate', descending: false)
+        .orderBy('appointmentDate', descending: true)
         .snapshots();
   }
 
-  /// Get appointment history (completed and cancelled) for patient
   Stream<QuerySnapshot> getAppointmentHistory(String patientId) {
     return _firestore
         .collection('appointments')
         .where('patientId', isEqualTo: patientId)
         .where('status', whereIn: ['completed', 'cancelled'])
-        .orderBy('appointmentDate', descending: false)
+        .orderBy('appointmentDate', descending: true)
         .snapshots();
   }
 
-  /// Get completed appointments for patient
   Stream<QuerySnapshot> getPatientCompletedAppointments(String patientId) {
     return _firestore
         .collection('appointments')
         .where('patientId', isEqualTo: patientId)
         .where('status', isEqualTo: 'completed')
-        .orderBy('appointmentDate', descending: false)
+        .orderBy('appointmentDate', descending: true)
         .snapshots();
   }
 
-  /// Update appointment status
   Future<bool> updateAppointmentStatus(
     String appointmentId,
     String status,
@@ -463,17 +576,14 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Cancel appointment
   Future<bool> cancelAppointment(String appointmentId) async {
     return updateAppointmentStatus(appointmentId, 'cancelled');
   }
 
-  /// Mark appointment as completed
   Future<bool> markAppointmentCompleted(String appointmentId) async {
     return updateAppointmentStatus(appointmentId, 'completed');
   }
 
-  /// Get single appointment by ID
   Future<Map<String, dynamic>?> getAppointmentById(String appointmentId) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -489,7 +599,6 @@ Future<UserCredential> patientSignUp({
 
   // ==================== CHAT ====================
 
-  /// Get doctor's chats
   Stream<QuerySnapshot> getDoctorChats(String doctorId) {
     return _firestore
         .collection('chats')
@@ -498,7 +607,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get patient's chats
   Stream<QuerySnapshot> getPatientChats(String patientId) {
     return _firestore
         .collection('chats')
@@ -507,7 +615,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Get messages for a specific chat
   Stream<QuerySnapshot> getChatMessages(String chatId) {
     return _firestore
         .collection('chats')
@@ -517,7 +624,6 @@ Future<UserCredential> patientSignUp({
         .snapshots();
   }
 
-  /// Send message
   Future<bool> sendMessage(
     String chatId,
     String senderId,
@@ -547,14 +653,12 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Create or get chat between patient and doctor
   Future<String> getOrCreateChat({
     required String patientId,
     required String patientName,
     required String doctorId,
     required String doctorName,
   }) async {
-    // 1️⃣ Check if chat already exists
     final existingChat = await _firestore
         .collection('chats')
         .where('patientId', isEqualTo: patientId)
@@ -566,7 +670,6 @@ Future<UserCredential> patientSignUp({
       return existingChat.docs.first.id;
     }
 
-    // 2️⃣ Create new chat with REQUIRED fields
     final chatRef = await _firestore.collection('chats').add({
       'patientId': patientId,
       'patientName': patientName,
@@ -574,12 +677,12 @@ Future<UserCredential> patientSignUp({
       'doctorName': doctorName,
       'lastMessage': '',
       'lastMessageTime': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
 
     return chatRef.id;
   }
 
-  /// Mark messages as read
   Future<bool> markMessagesAsRead(String chatId, String userId) async {
     try {
       QuerySnapshot unreadMessages = await _firestore
@@ -604,7 +707,6 @@ Future<UserCredential> patientSignUp({
 
   // ==================== PATIENT PROFILE ====================
 
-  /// Get patient information
   Future<Map<String, dynamic>?> getPatientInfo(String patientId) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -618,7 +720,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Update patient profile
   Future<bool> updatePatientProfile(
     String patientId,
     Map<String, dynamic> data,
@@ -633,81 +734,8 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  // ==================== CATEGORIES ====================
-
-  /// Get available specializations
-  Future<List<String>> getAvailableSpecializations() async {
-    try {
-      QuerySnapshot doctors = await _firestore.collection('doctors').get();
-      Set<String> specializations = {};
-
-      for (var doc in doctors.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('specialization')) {
-          specializations.add(data['specialization']);
-        }
-      }
-
-      return specializations.toList();
-    } catch (e) {
-      print('Get specializations error: $e');
-      return [];
-    }
-  }
-
-  /// Get doctor count by specialty
-  Future<Map<String, int>> getDoctorCountBySpecialty() async {
-    try {
-      QuerySnapshot doctors = await _firestore.collection('doctors').get();
-      Map<String, int> counts = {};
-
-      for (var doc in doctors.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('specialization')) {
-          String specialty = data['specialization'];
-          counts[specialty] = (counts[specialty] ?? 0) + 1;
-        }
-      }
-
-      return counts;
-    } catch (e) {
-      print('Get doctor count error: $e');
-      return {};
-    }
-  }
-
   // ==================== STATISTICS & ANALYTICS ====================
 
-  /// Get total appointments count for doctor
-  Future<int> getDoctorAppointmentCount(String doctorId) async {
-    try {
-      QuerySnapshot appointments = await _firestore
-          .collection('appointments')
-          .where('doctorId', isEqualTo: doctorId)
-          .get();
-      return appointments.docs.length;
-    } catch (e) {
-      print('Get appointment count error: $e');
-      return 0;
-    }
-  }
-
-  /// Get completed appointments count for doctor
-  Future<int> getDoctorCompletedAppointments(String doctorId) async {
-    try {
-      QuerySnapshot appointments = await _firestore
-          .collection('appointments')
-          .where('doctorId', isEqualTo: doctorId)
-          .where('status', isEqualTo: 'completed')
-          .get();
-      return appointments.docs.length;
-    } catch (e) {
-      print('Get completed appointments error: $e');
-      return 0;
-    }
-  }
-
-  /// Get today's appointment count for doctor
   Future<int> getTodayAppointmentCount(String doctorId) async {
     try {
       DateTime now = DateTime.now();
@@ -734,7 +762,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Get upcoming appointment count for doctor
   Future<int> getUpcomingAppointmentCount(String doctorId) async {
     try {
       DateTime now = DateTime.now();
@@ -755,7 +782,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Get total unique patients count for doctor
   Future<int> getTotalPatientsCount(String doctorId) async {
     try {
       QuerySnapshot appointments = await _firestore
@@ -778,7 +804,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Get monthly revenue for doctor
   Future<double> getMonthlyRevenue(String doctorId) async {
     try {
       DateTime now = DateTime.now();
@@ -813,9 +838,9 @@ Future<UserCredential> patientSignUp({
       return 0.0;
     }
   }
+
   // ==================== PASSWORD RESET ====================
 
-  /// Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -825,11 +850,9 @@ Future<UserCredential> patientSignUp({
       return false;
     }
   }
-  
 
   // ==================== USER ROLE CHECK ====================
 
-  /// Check if user is a doctor
   Future<bool> isDoctor(String userId) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -843,7 +866,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Check if user is a patient
   Future<bool> isPatient(String userId) async {
     try {
       DocumentSnapshot doc = await _firestore
@@ -857,7 +879,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  /// Get user role
   Future<String?> getUserRole(String userId) async {
     try {
       if (await isDoctor(userId)) {
@@ -872,61 +893,6 @@ Future<UserCredential> patientSignUp({
     }
   }
 
-  // ==================== DOCTOR AVAILABILITY ====================
-
-  /// Set doctor availability for specific dates/times
-  Future<bool> setDoctorAvailability({
-    required String doctorId,
-    required DateTime date,
-    required List<String> availableTimes,
-  }) async {
-    try {
-      String dateKey =
-          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-      await _firestore
-          .collection('doctors')
-          .doc(doctorId)
-          .collection('availability')
-          .doc(dateKey)
-          .set({
-            'date': Timestamp.fromDate(date),
-            'availableTimes': availableTimes,
-            'bookedTimes': [],
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-
-      return true;
-    } catch (e) {
-      print('Set availability error: $e');
-      return false;
-    }
-  }
-
-  /// Get doctor availability for a specific date
-  Future<Map<String, dynamic>?> getDoctorAvailability(
-    String doctorId,
-    DateTime date,
-  ) async {
-    try {
-      String dateKey =
-          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-      DocumentSnapshot doc = await _firestore
-          .collection('doctors')
-          .doc(doctorId)
-          .collection('availability')
-          .doc(dateKey)
-          .get();
-
-      return doc.exists ? doc.data() as Map<String, dynamic> : null;
-    } catch (e) {
-      print('Get availability error: $e');
-      return null;
-    }
-  }
-
-  /// Book a time slot
   Future<bool> bookTimeSlot({
     required String doctorId,
     required DateTime date,
@@ -951,82 +917,5 @@ Future<UserCredential> patientSignUp({
       return false;
     }
   }
-
-  Future<String> bookAppointmentTransaction({
-    required String patientId,
-    required String doctorId,
-    required DateTime appointmentDate,
-    required String appointmentTime,
-    required String serviceType,
-    required double fees,
-    required String paymentMethod,
-    required String clinicLocation,
-    required String doctorName,
-    required String doctorSpecialty,
-  }) async {
-    // 🔹 SAFELY GET PATIENT NAME
-    final patientData = await getPatientInfo(patientId);
-    final patientName = patientData?['name'] ?? 'Patient';
-
-    final dateKey =
-        "${appointmentDate.year}-${appointmentDate.month.toString().padLeft(2, '0')}-${appointmentDate.day.toString().padLeft(2, '0')}";
-
-    final availabilityRef = _firestore
-        .collection('doctors')
-        .doc(doctorId)
-        .collection('availability')
-        .doc(dateKey);
-
-    final appointmentsRef = _firestore.collection('appointments').doc();
-
-    return _firestore.runTransaction((transaction) async {
-      // 1️⃣ READ AVAILABILITY
-      final availabilitySnap = await transaction.get(availabilityRef);
-
-      if (!availabilitySnap.exists) {
-        throw Exception("Doctor availability not set for this date");
-      }
-
-      final data = availabilitySnap.data() as Map<String, dynamic>;
-
-      final List<String> bookedTimes = (data['bookedTimes'] as List? ?? [])
-          .whereType<String>()
-          .toList();
-
-      // 2️⃣ CHECK SLOT
-      if (bookedTimes.contains(appointmentTime)) {
-        throw Exception("Time slot already booked");
-      }
-
-      // 3️⃣ BOOK SLOT
-      transaction.update(availabilityRef, {
-        'bookedTimes': FieldValue.arrayUnion([appointmentTime]),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // 4️⃣ CREATE APPOINTMENT
-      transaction.set(appointmentsRef, {
-        'patientId': patientId,
-        'patientName': patientName,
-        'doctorId': doctorId,
-        'doctorName': doctorName,
-        'doctorSpecialty': doctorSpecialty,
-        'appointmentDate': Timestamp.fromDate(appointmentDate),
-        'appointmentTime': appointmentTime,
-        'serviceType': serviceType,
-        'fees': fees,
-        'paymentMethod': paymentMethod,
-        'clinicLocation': clinicLocation,
-        'status': 'upcoming',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // ✅ RETURN APPOINTMENT ID
-      return appointmentsRef.id;
-    });
-  }
+  
 }
-
-
-
