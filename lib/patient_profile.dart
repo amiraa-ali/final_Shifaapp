@@ -67,9 +67,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     } catch (e) {
       setState(() => isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       }
     }
   }
@@ -85,7 +85,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Profile Picture?'),
-          content: const Text('Are you sure you want to remove your profile picture?'),
+          content: const Text(
+            'Are you sure you want to remove your profile picture?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -112,9 +114,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
       // Delete all profile images (in case of different extensions)
       for (var file in files) {
         if (file.name.startsWith('profile.')) {
-          await supabase.storage
-              .from('patient-images')
-              .remove(['${user.uid}/${file.name}']);
+          await supabase.storage.from('patient-images').remove([
+            '${user.uid}/${file.name}',
+          ]);
         }
       }
 
@@ -176,7 +178,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
       // STEP 2: Flutter reads image as bytes
       final Uint8List bytes = await image.readAsBytes();
       final ext = image.name.split('.').last.toLowerCase();
-      
+
       // ✅ Validate file extension (security)
       if (!['jpg', 'jpeg', 'png', 'webp'].contains(ext)) {
         throw Exception('Invalid image format. Use JPG, PNG, or WebP');
@@ -200,9 +202,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
             .toList();
 
         if (filesToDelete.isNotEmpty) {
-          await supabase.storage
-              .from('patient-images')
-              .remove(filesToDelete);
+          await supabase.storage.from('patient-images').remove(filesToDelete);
         }
       } catch (e) {
         // Ignore errors if folder doesn't exist yet
@@ -215,7 +215,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
       // STEP 3: Upload to Supabase Storage (bucket: patient-images)
       // Note: Policies are set to 'true' because we're using Firebase Auth
-      await supabase.storage.from('patient-images').uploadBinary(
+      await supabase.storage
+          .from('patient-images')
+          .uploadBinary(
             filePath,
             bytes,
             fileOptions: FileOptions(
@@ -225,8 +227,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
           );
 
       // STEP 4: Get public URL
-      final publicUrl =
-          supabase.storage.from('patient-images').getPublicUrl(filePath);
+      final publicUrl = supabase.storage
+          .from('patient-images')
+          .getPublicUrl(filePath);
 
       // Add cache-busting timestamp to force image refresh
       final finalUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
@@ -298,10 +301,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -336,15 +336,18 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               style: ElevatedButton.styleFrom(
                 shape: const StadiumBorder(),
                 backgroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 15,
+                ),
               ),
               child: const Text(
                 'Done',
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal,
+                ),
               ),
             ),
       body: SingleChildScrollView(
@@ -355,8 +358,10 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               // ================= HEADER =================
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 40,
+                  horizontal: 20,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xff39ab4a), Color(0xff009f93)],
@@ -376,17 +381,32 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              CircleAvatar(
-                                radius: 50,
-                                backgroundColor: Colors.white24,
-                                backgroundImage: profileImageUrl != null
-                                    ? NetworkImage(profileImageUrl!)
-                                    : null,
-                                child: profileImageUrl == null
-                                    ? const Icon(Icons.camera_alt,
-                                        color: Colors.white, size: 20)
-                                    : null,
-                              ),
+                             CircleAvatar(
+  radius: 50,
+  backgroundColor: Colors.white24,
+  child: profileImageUrl != null
+      ? ClipOval(
+          child: Image.network(
+            profileImageUrl!,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              print('Image error: $error');
+              return const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 20,
+              );
+            },
+          ),
+        )
+      : const Icon(
+          Icons.camera_alt,
+          color: Colors.white,
+          size: 20,
+        ),
+),
                               if (isUploadingImage)
                                 const Positioned.fill(
                                   child: Center(
@@ -414,7 +434,10 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade600,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 3),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 3,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.3),
@@ -440,15 +463,18 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                           ? 'User'
                           : nameController.text,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       emailController.text,
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 16),
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -461,7 +487,8 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -469,16 +496,26 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                       children: [
                         infoField(Icons.person, 'Name', nameController),
                         const Divider(),
-                        infoField(Icons.email, 'Email', emailController,
-                            enabled: false),
+                        infoField(
+                          Icons.email,
+                          'Email',
+                          emailController,
+                          enabled: false,
+                        ),
                         const Divider(),
                         infoField(Icons.phone, 'Phone', phoneController),
                         const Divider(),
-                        infoField(Icons.location_on, 'Location',
-                            locationController),
+                        infoField(
+                          Icons.location_on,
+                          'Location',
+                          locationController,
+                        ),
                         const Divider(),
-                        infoField(Icons.calendar_today, 'Date of Birth',
-                            dobController),
+                        infoField(
+                          Icons.calendar_today,
+                          'Date of Birth',
+                          dobController,
+                        ),
                       ],
                     ),
                   ),
@@ -492,16 +529,21 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Medical Conditions',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Medical Conditions',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         ...medicalSelected.entries.map((e) {
                           return CheckboxListTile(

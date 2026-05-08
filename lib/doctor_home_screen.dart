@@ -17,8 +17,7 @@ class DoctorHomeScreen extends StatefulWidget {
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   final FirebaseServices _firebaseServices = FirebaseServices();
-  final GlobalKey<ScaffoldState> _scaffoldKey =
-      GlobalKey<ScaffoldState>(); // ✅ ضيفي السطر ده
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int index = 0;
 
   String doctorName = 'Dr. Loading...';
@@ -91,7 +90,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     }
 
     return Scaffold(
-      key: _scaffoldKey, // ✅ ضيفي السطر ده
+      key: _scaffoldKey,
       backgroundColor: Colors.grey[50],
       drawer: _buildDrawer(),
 
@@ -141,7 +140,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     );
   }
 
-  /// ================== DRAWER ==================
   Widget _buildDrawer() {
     String initials = doctorName.isNotEmpty
         ? doctorName.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
@@ -204,7 +202,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                MaterialPageRoute(builder: (context) => SettingsPage()),
               );
             },
           ),
@@ -240,11 +238,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ========== ROW 1: Menu + Info + Avatar ==========
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Menu Button
                 GestureDetector(
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                   child: Container(
@@ -263,7 +259,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
                 const SizedBox(width: 12),
 
-                // Welcome + Name + Specialty
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,7 +287,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   ),
                 ),
 
-                // Avatar
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.white,

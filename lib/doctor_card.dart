@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'details.dart';
+
 // ⚠️ لو Package مش موجود، استخدمي Image.network بدله
 // import 'package:cached_network_image/cached_network_image.dart';
 /// ======================

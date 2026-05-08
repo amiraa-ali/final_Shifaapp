@@ -113,7 +113,9 @@ class _DoctorProfileState extends State<DoctorProfile> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Profile Picture?'),
-          content: const Text('Are you sure you want to remove your profile picture?'),
+          content: const Text(
+            'Are you sure you want to remove your profile picture?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -140,9 +142,9 @@ class _DoctorProfileState extends State<DoctorProfile> {
       // Delete all profile images (in case of different extensions)
       for (var file in files) {
         if (file.name.startsWith('profile.')) {
-          await supabase.storage
-              .from('doctor-images')
-              .remove(['$doctorId/${file.name}']);
+          await supabase.storage.from('doctor-images').remove([
+            '$doctorId/${file.name}',
+          ]);
         }
       }
 
@@ -200,7 +202,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
       // STEP 2: Flutter reads image as bytes
       final Uint8List bytes = await image.readAsBytes();
       final ext = image.name.split('.').last.toLowerCase();
-      
+
       // ✅ Validate file extension
       if (!['jpg', 'jpeg', 'png', 'webp'].contains(ext)) {
         throw Exception('Invalid image format. Use JPG, PNG, or WebP');
@@ -224,9 +226,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
             .toList();
 
         if (filesToDelete.isNotEmpty) {
-          await supabase.storage
-              .from('doctor-images')
-              .remove(filesToDelete);
+          await supabase.storage.from('doctor-images').remove(filesToDelete);
         }
       } catch (e) {
         debugPrint('No old images to delete: $e');
@@ -236,18 +236,18 @@ class _DoctorProfileState extends State<DoctorProfile> {
       final filePath = '$doctorId/profile.$ext';
 
       // STEP 3: Upload to Supabase Storage (bucket: doctor-images)
-      await supabase.storage.from('doctor-images').uploadBinary(
+      await supabase.storage
+          .from('doctor-images')
+          .uploadBinary(
             filePath,
             bytes,
-            fileOptions: FileOptions(
-              upsert: true,
-              contentType: 'image/$ext',
-            ),
+            fileOptions: FileOptions(upsert: true, contentType: 'image/$ext'),
           );
 
       // STEP 4: Get public URL
-      final publicUrl =
-          supabase.storage.from('doctor-images').getPublicUrl(filePath);
+      final publicUrl = supabase.storage
+          .from('doctor-images')
+          .getPublicUrl(filePath);
 
       // Add cache-busting timestamp
       final finalUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
@@ -568,7 +568,10 @@ class _DoctorProfileState extends State<DoctorProfile> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _confirmLogout,
-                    icon: const Icon(Icons.logout, color: Color.fromARGB(255, 255, 255, 255)),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
                     label: const Text(
                       'Logout',
                       style: TextStyle(
@@ -577,13 +580,13 @@ class _DoctorProfileState extends State<DoctorProfile> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                     style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -628,8 +631,11 @@ class _DoctorProfileState extends State<DoctorProfile> {
                             ? NetworkImage(profileImageUrl!)
                             : null,
                         child: profileImageUrl == null
-                            ? const Icon(Icons.camera_alt,
-                                color: Colors.white, size: 30)
+                            ? const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 30,
+                              )
                             : null,
                       ),
                       if (isUploadingImage)

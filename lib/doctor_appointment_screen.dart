@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_home_screen.dart';
 
@@ -205,7 +206,7 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
         final appointments = allAppointments.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final status = data['status'] ?? 'upcoming';
-          
+
           if (tabType == 'today') {
             return status == 'upcoming';
           } else if (tabType == 'upcoming') {
@@ -250,6 +251,8 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
               appointmentId: doc.id,
               patientName: data['patientName'] ?? 'Unknown Patient',
               specialty: data['doctorSpecialty'] ?? 'General',
+              appointmentDate: (data['appointmentDate'] as Timestamp?)
+                  ?.toDate(),
               time: data['appointmentTime'] ?? 'N/A',
               fees: (data['fees'] ?? 0).toDouble(),
               paymentMethod: data['paymentMethod'] ?? 'Cash',
@@ -285,6 +288,7 @@ class AppointmentCard extends StatefulWidget {
   final String appointmentId;
   final String patientName;
   final String specialty;
+  final DateTime? appointmentDate;
   final String time;
   final double fees;
   final String paymentMethod;
@@ -297,6 +301,7 @@ class AppointmentCard extends StatefulWidget {
     required this.appointmentId,
     required this.patientName,
     required this.specialty,
+    this.appointmentDate,
     required this.time,
     required this.fees,
     required this.paymentMethod,
@@ -312,6 +317,29 @@ class AppointmentCard extends StatefulWidget {
 class _AppointmentCardState extends State<AppointmentCard> {
   final FirebaseServices _firebaseServices = FirebaseServices();
   bool isUpdating = false;
+
+  // ==================== FORMAT DATE ====================
+  String _formatAppointmentDate() {
+    if (widget.appointmentDate == null) return 'No date';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final appointmentDay = DateTime(
+      widget.appointmentDate!.year,
+      widget.appointmentDate!.month,
+      widget.appointmentDate!.day,
+    );
+
+    if (appointmentDay == today) {
+      return 'Today';
+    } else if (appointmentDay == tomorrow) {
+      return 'Tomorrow';
+    } else {
+      // Format: Mon, Jan 15
+      return DateFormat('EEE, MMM d').format(widget.appointmentDate!);
+    }
+  }
 
   Future<void> _markAsCompleted() async {
     setState(() => isUpdating = true);
@@ -506,22 +534,72 @@ class _AppointmentCardState extends State<AppointmentCard> {
             const SizedBox(height: 10),
             const Divider(height: 1, color: Color(0xFFF0F0F0)),
             const SizedBox(height: 10),
+
+            // ================= DATE & TIME DISPLAY =================
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Date
                 Row(
                   children: [
-                    const Icon(Icons.access_time, color: Colors.grey, size: 18),
-                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.teal,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      widget.time,
+                      _formatAppointmentDate(),
                       style: const TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
                     ),
                   ],
                 ),
+                // Time
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.access_time,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.time,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ================= ACTION BUTTONS =================
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
                 if (isUpdating)
                   const SizedBox(
                     width: 20,

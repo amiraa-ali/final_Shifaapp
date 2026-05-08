@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shifa/Services/firebase_services.dart';
 import 'patient_login.dart';
 
@@ -285,18 +284,6 @@ class _PateintSignupState extends State<PateintSignup> {
     try {
       UserCredential? userCredential;
 
-      switch (provider) {
-        case 'google':
-          userCredential = await _firebaseServices.signInWithGoogle();
-          break;
-        case 'facebook':
-          userCredential = await _firebaseServices.signInWithFacebook();
-          break;
-        case 'linkedin':
-          userCredential = await _firebaseServices.signInWithLinkedIn();
-          break;
-      }
-
       if (userCredential == null) {
         setState(() => isLoading = false);
         return;
@@ -409,16 +396,10 @@ class _PateintSignupState extends State<PateintSignup> {
               children: [
                 // ================= LOGO =================
                 Image.asset(
-                  "assets/logo remover.png",
-                  height: 120,
+                  "images/logo.png",
+                  height: 300,
+                  width: 300,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.health_and_safety,
-                      size: 100,
-                      color: Colors.teal,
-                    );
-                  },
                 ),
                 const SizedBox(height: 20),
                 const Text(
@@ -707,28 +688,6 @@ class _PateintSignupState extends State<PateintSignup> {
                 const SizedBox(height: 20),
 
                 // ================= SOCIAL SIGNUP BUTTONS =================
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _socialButton(
-                      icon: FontAwesomeIcons.google,
-                      color: const Color(0xFFDB4437),
-                      onTap: () => _handleSocialSignUp('google'),
-                    ),
-                    const SizedBox(width: 15),
-                    _socialButton(
-                      icon: FontAwesomeIcons.facebook,
-                      color: const Color(0xFF1877F2),
-                      onTap: () => _handleSocialSignUp('facebook'),
-                    ),
-                    const SizedBox(width: 15),
-                    _socialButton(
-                      icon: FontAwesomeIcons.linkedin,
-                      color: const Color(0xFF0A66C2),
-                      onTap: () => _handleSocialSignUp('linkedin'),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -760,7 +719,6 @@ class _PateintSignupState extends State<PateintSignup> {
             ),
           ],
         ),
-        child: Center(child: FaIcon(icon, color: color, size: 24)),
       ),
     );
   }

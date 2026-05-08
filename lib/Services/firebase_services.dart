@@ -1,12 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class FirebaseServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ==================== AUTH & USER STATE ====================
 
@@ -56,70 +53,12 @@ class FirebaseServices {
 
   /// Sign out
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await FacebookAuth.instance.logOut();
     await _auth.signOut();
   }
 
   /// Logout (alternative name)
   Future<void> logout() async {
     await signOut();
-  }
-
-  // ==================== SOCIAL AUTHENTICATION ====================
-
-  /// Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
-    try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        return null;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      return await _auth.signInWithCredential(credential);
-    } catch (e) {
-      print('Google sign in error: $e');
-      rethrow;
-    }
-  }
-
-  /// Sign in with Facebook
-  Future<UserCredential?> signInWithFacebook() async {
-    try {
-      // Trigger the sign-in flow
-      final LoginResult result = await FacebookAuth.instance.login();
-
-      if (result.status == LoginStatus.success) {
-        // Create a credential from the access token
-        final OAuthCredential facebookAuthCredential =
-            FacebookAuthProvider.credential(result.accessToken!.token);
-
-        // Sign in to Firebase with the Facebook credential
-        return await _auth.signInWithCredential(facebookAuthCredential);
-      } else if (result.status == LoginStatus.cancelled) {
-        // User cancelled
-        return null;
-      } else {
-        throw Exception('Facebook login failed: ${result.message}');
-      }
-    } catch (e) {
-      print('Facebook sign in error: $e');
-      rethrow;
-    }
   }
 
   /// Sign in with LinkedIn (using OAuth)
@@ -502,16 +441,11 @@ class FirebaseServices {
   }
 
   Stream<QuerySnapshot> getUpcomingPatientAppointments(String patientId) {
-    DateTime now = DateTime.now();
     return _firestore
         .collection('appointments')
         .where('patientId', isEqualTo: patientId)
         .where('status', isEqualTo: 'upcoming')
-        .where(
-          'appointmentDate',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(now),
-        )
-        .orderBy('appointmentDate')
+        .orderBy('appointmentDate', descending: false)
         .snapshots();
   }
 
@@ -530,6 +464,13 @@ class FirebaseServices {
         .where('doctorId', isEqualTo: doctorId)
         .where('status', isEqualTo: 'completed')
         .orderBy('appointmentDate', descending: true)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot> getDoctorAllAppointments(String doctorId) {
+    return _firestore
+        .collection('appointments')
+        .where('doctorId', isEqualTo: doctorId)
         .snapshots();
   }
 
@@ -917,5 +858,4 @@ class FirebaseServices {
       return false;
     }
   }
-  
 }

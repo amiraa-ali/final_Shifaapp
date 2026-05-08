@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shifa/categories_card.dart';
 import 'package:shifa/doctor_page.dart';
+import 'package:shifa/patient_appointment_screen.dart';
 import 'package:shifa/patient_profile.dart';
 import 'package:shifa/setting_page.dart';
 import 'package:shifa/Services/firebase_services.dart';
@@ -65,7 +66,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   final pages = [
     const SizedBox.shrink(),
     const PatientChatScreen(),
-    const AllCategoriesPage(),
+    const MyAppointmentsScreen(),
     const PatientProfilePage(),
   ];
 
@@ -99,7 +100,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
-            label: 'Bookings',
+            label: 'My Appointments',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outlined),
