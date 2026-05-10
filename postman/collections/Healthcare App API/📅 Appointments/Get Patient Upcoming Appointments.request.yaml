@@ -1,0 +1,13 @@
+$kind: http-request
+name: Get Patient Upcoming Appointments
+method: GET
+url: '{{baseUrl}}/api/appointments/patient?filter=upcoming'
+order: 6000
+headers: 
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+queryParams: 
+  - key: filter
+    value: upcoming
+

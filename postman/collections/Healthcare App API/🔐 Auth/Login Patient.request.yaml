@@ -1,0 +1,27 @@
+$kind: http-request
+name: Login Patient
+method: POST
+url: '{{baseUrl}}/api/auth/login'
+order: 4000
+headers: 
+  - key: Content-Type
+    value: application/json
+
+body: 
+  type: json
+  content: |-
+    {
+      "email": "patient@healthcare.com",
+      "password": "password123"
+    }
+
+scripts: 
+  - type: afterResponse
+    code: |-
+    if (pm.response.code === 200) {
+      const res = pm.response.json();
+      pm.collectionVariables.set('authToken', res.data.token);
+      pm.test('Login successful', () => pm.expect(res.success).to.be.true);
+    }
+    language: text/javascript
+

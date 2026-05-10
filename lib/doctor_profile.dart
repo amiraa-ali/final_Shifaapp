@@ -1,289 +1,249 @@
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/setting_page.dart';
 import 'package:shifa/welcome.dart';
+import 'package:shifa/app_theme.dart';
 
 class DoctorProfile extends StatefulWidget {
   const DoctorProfile({super.key});
+
   @override
   State<DoctorProfile> createState() => _DoctorProfileState();
 }
 
 class _DoctorProfileState extends State<DoctorProfile> {
   final FirebaseServices _firebaseServices = FirebaseServices();
+
   final supabase = Supabase.instance.client;
 
-  static const Color primaryIconColor = Color(0xff009f93);
-  static const Color lightIconBackground = Color(0xFFE0F7F7);
-  static const LinearGradient unifiedGradient = LinearGradient(
-    colors: [Color(0xff39ab4a), Color(0xff009f93)],
-    begin: Alignment.bottomRight,
-    end: Alignment.topLeft,
-  );
-
-  Color avatarColor = Colors.blue;
   final _formKey = GlobalKey<FormState>();
 
-  // State management
   bool isLoading = true;
+
   bool isSaving = false;
+
   bool isUploadingImage = false;
+
   String? doctorId;
 
-  // Controllers
   final emailController = TextEditingController();
+
   final phoneController = TextEditingController();
+
   final locationController = TextEditingController();
+
   final specializationController = TextEditingController();
+
   final universityController = TextEditingController();
+
   final certificateController = TextEditingController();
+
   final aboutController = TextEditingController();
+
   final feesController = TextEditingController();
 
-  String nameDisplay = 'Dr. Loading...';
+  String nameDisplay = 'Doctor';
+
   String? profileImageUrl;
+
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
+
     _loadDoctorProfile();
 
     specializationController.addListener(() {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
   Future<void> _loadDoctorProfile() async {
-    setState(() => isLoading = true);
-
-    doctorId = _firebaseServices.getCurrentUserId();
-
-    if (doctorId == null) {
-      setState(() => isLoading = false);
-      return;
-    }
-
     try {
+      setState(() {
+        isLoading = true;
+      });
+
+      doctorId = _firebaseServices.getCurrentUserId();
+
+      if (doctorId == null) {
+        setState(() {
+          isLoading = false;
+        });
+
+        return;
+      }
+
       final profile = await _firebaseServices.getDoctorProfile(doctorId!);
+
+      if (!mounted) return;
 
       if (profile != null) {
         setState(() {
-          nameDisplay = profile['name'] ?? 'Dr. Unknown';
-          emailController.text = profile['email'] ?? '';
-          phoneController.text = profile['phone'] ?? '';
-          locationController.text = profile['clinicLocation'] ?? '';
-          specializationController.text = profile['specialization'] ?? '';
-          feesController.text = (profile['fees'] ?? 0).toString();
-          profileImageUrl = profile['imageUrl'];
+          nameDisplay = profile['name'] ?? 'Doctor';
 
-          // Load additional fields if they exist
+          emailController.text = profile['email'] ?? '';
+
+          phoneController.text = profile['phone'] ?? '';
+
+          locationController.text = profile['clinicLocation'] ?? '';
+
+          specializationController.text = profile['specialization'] ?? '';
+
           universityController.text = profile['university'] ?? '';
+
           certificateController.text = profile['certificate'] ?? '';
+
           aboutController.text = profile['about'] ?? '';
+
+          feesController.text = (profile['fees'] ?? 0).toString();
+
+          profileImageUrl = profile['imageUrl'];
 
           isLoading = false;
         });
       } else {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+        });
       }
     } catch (e) {
-      print('Error loading profile: $e');
-      if (mounted) {
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading profile: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+      debugPrint(e.toString());
 
-  // ================= DELETE IMAGE =================
-  Future<void> deleteProfileImage() async {
-    try {
-      if (doctorId == null) throw Exception('User not authenticated');
-
-      // Show confirmation dialog
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Profile Picture?'),
-          content: const Text(
-            'Are you sure you want to remove your profile picture?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm != true) return;
-
-      setState(() => isUploadingImage = true);
-
-      // Find all files in doctor's folder
-      final files = await supabase.storage
-          .from('doctor-images')
-          .list(path: doctorId!);
-
-      // Delete all profile images (in case of different extensions)
-      for (var file in files) {
-        if (file.name.startsWith('profile.')) {
-          await supabase.storage.from('doctor-images').remove([
-            '$doctorId/${file.name}',
-          ]);
-        }
-      }
-
-      // Remove from Firestore
-      await _firebaseServices.updateDoctorProfile(doctorId!, {
-        'imageUrl': null,
-      });
+      if (!mounted) return;
 
       setState(() {
-        profileImageUrl = null;
-        isUploadingImage = false;
+        isLoading = false;
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Profile picture removed'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() => isUploadingImage = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Delete failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
-  // ================= PICK & UPLOAD IMAGE =================
   Future<void> pickProfileImage() async {
     try {
-      // STEP 1: User picks image from gallery
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
+        imageQuality: 75,
         maxWidth: 512,
         maxHeight: 512,
-        imageQuality: 75,
       );
 
       if (image == null) return;
 
-      setState(() => isUploadingImage = true);
+      setState(() {
+        isUploadingImage = true;
+      });
 
-      // ✅ Security Check
-      if (doctorId == null) {
-        throw Exception('⚠️ You must be logged in to upload images');
-      }
-
-      // STEP 2: Flutter reads image as bytes
       final Uint8List bytes = await image.readAsBytes();
-      final ext = image.name.split('.').last.toLowerCase();
 
-      // ✅ Validate file extension
-      if (!['jpg', 'jpeg', 'png', 'webp'].contains(ext)) {
-        throw Exception('Invalid image format. Use JPG, PNG, or WebP');
-      }
+      final ext = image.name.split('.').last;
 
-      // ✅ Validate file size (max 5MB)
-      if (bytes.length > 5 * 1024 * 1024) {
-        throw Exception('Image too large. Max size is 5MB');
-      }
+      final path = '$doctorId/profile.$ext';
 
-      // ✅ STEP 2.5: Delete old profile images before uploading new one
-      try {
-        final files = await supabase.storage
-            .from('doctor-images')
-            .list(path: doctorId!);
-
-        // Delete all old profile images (any extension)
-        final filesToDelete = files
-            .where((file) => file.name.startsWith('profile.'))
-            .map((file) => '$doctorId/${file.name}')
-            .toList();
-
-        if (filesToDelete.isNotEmpty) {
-          await supabase.storage.from('doctor-images').remove(filesToDelete);
-        }
-      } catch (e) {
-        debugPrint('No old images to delete: $e');
-      }
-
-      // Create file path: {doctorId}/profile.{ext}
-      final filePath = '$doctorId/profile.$ext';
-
-      // STEP 3: Upload to Supabase Storage (bucket: doctor-images)
       await supabase.storage
           .from('doctor-images')
           .uploadBinary(
-            filePath,
+            path,
             bytes,
             fileOptions: FileOptions(upsert: true, contentType: 'image/$ext'),
           );
 
-      // STEP 4: Get public URL
       final publicUrl = supabase.storage
           .from('doctor-images')
-          .getPublicUrl(filePath);
+          .getPublicUrl(path);
 
-      // Add cache-busting timestamp
-      final finalUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+      final imageUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
 
-      // STEP 5: Save URL to Firebase Firestore
       await _firebaseServices.updateDoctorProfile(doctorId!, {
-        'imageUrl': finalUrl,
+        'imageUrl': imageUrl,
       });
 
-      // STEP 6: Display image in UI
+      if (!mounted) return;
+
       setState(() {
-        profileImageUrl = finalUrl;
+        profileImageUrl = imageUrl;
+
         isUploadingImage = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Profile image updated successfully!'),
-            backgroundColor: Colors.teal,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      _showSnackBar('Profile image updated successfully');
     } catch (e) {
-      setState(() => isUploadingImage = false);
+      if (!mounted) return;
+
+      setState(() {
+        isUploadingImage = false;
+      });
+
+      _showSnackBar(e.toString(), isError: true);
+    }
+  }
+
+  Future<void> saveForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (doctorId == null) return;
+
+    try {
+      setState(() {
+        isSaving = true;
+      });
+
+      await _firebaseServices.updateDoctorProfile(doctorId!, {
+        'phone': phoneController.text.trim(),
+        'clinicLocation': locationController.text.trim(),
+        'specialization': specializationController.text.trim(),
+        'university': universityController.text.trim(),
+        'certificate': certificateController.text.trim(),
+        'about': aboutController.text.trim(),
+        'fees': double.tryParse(feesController.text) ?? 0,
+      });
+
+      if (!mounted) return;
+
+      _showSnackBar('Profile updated successfully');
+    } catch (e) {
+      if (!mounted) return;
+
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ ${e.toString().replaceAll('Exception: ', '')}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        setState(() {
+          isSaving = false;
+        });
       }
     }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Colors.red : AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Text(message),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await _firebaseServices.logout();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -299,299 +259,419 @@ class _DoctorProfileState extends State<DoctorProfile> {
     super.dispose();
   }
 
-  void changeAvatar() => setState(
-    () => avatarColor = avatarColor == Colors.blue ? Colors.red : Colors.blue,
-  );
-
-  Future<void> saveForm() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fix errors ⚠️')));
-      return;
-    }
-
-    if (doctorId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Error: Not logged in')));
-      return;
-    }
-
-    setState(() => isSaving = true);
-
-    try {
-      // Prepare update data
-      Map<String, dynamic> updateData = {
-        'phone': phoneController.text.trim(),
-        'clinicLocation': locationController.text.trim(),
-        'specialization': specializationController.text.trim(),
-        'university': universityController.text.trim(),
-        'certificate': certificateController.text.trim(),
-        'about': aboutController.text.trim(),
-      };
-
-      // Add fees if provided
-      if (feesController.text.isNotEmpty) {
-        updateData['fees'] = double.tryParse(feesController.text) ?? 0.0;
-      }
-
-      bool success = await _firebaseServices.updateDoctorProfile(
-        doctorId!,
-        updateData,
-      );
-
-      if (!mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully! ✅'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        throw Exception('Failed to update profile');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => isSaving = false);
-      }
-    }
-  }
-
-  Future<void> _confirmLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await _firebaseServices.logout();
-      if (!mounted) return;
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-        (route) => false,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: primaryIconColor)),
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xfff2f2f2),
+      backgroundColor: const Color(0xffF4F7FB),
 
-      floatingActionButton: isSaving
-          ? const CircularProgressIndicator()
-          : ElevatedButton(
-              onPressed: saveForm,
-              style: ElevatedButton.styleFrom(
-                shape: const StadiumBorder(),
-                backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 25,
-                  vertical: 15,
-                ),
-              ),
-              child: const Text(
-                'Save',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: primaryIconColor,
-                ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: FloatingActionButton.extended(
+          onPressed: isSaving ? null : saveForm,
+
+          backgroundColor: AppColors.primary,
+
+          elevation: 5,
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+
+          icon: const Icon(Icons.save, color: Colors.white),
+
+          label: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              "Save Changes",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
+          ),
+        ),
+      ),
 
-      body: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _buildHeader(),
+
+                const SizedBox(height: 18),
+
+                _buildStatusCard(),
+
+                const SizedBox(height: 18),
+
+                _buildProfessionalSection(),
+
+                const SizedBox(height: 18),
+
+                _buildContactSection(),
+
+                const SizedBox(height: 18),
+
+                _buildEducationSection(),
+
+                const SizedBox(height: 18),
+
+                _buildAboutSection(),
+
+                const SizedBox(height: 18),
+
+                _buildSettingsSection(),
+
+                const SizedBox(height: 140),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 36),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xff008E97), Color(0xff12B3A8), Color(0xff31C46C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(42),
+          bottomRight: Radius.circular(42),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // ================= HEADER =================
-              _buildProfileHeader(context),
-
-              const SizedBox(height: 30),
-
-              // ================= SPECIALIZATION =================
-              sectionCard(
-                title: "Specialization",
-                children: [
-                  _buildInfoField(
-                    icon: Icons.medical_services,
-                    label: "Specialization",
-                    controller: specializationController,
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? "Specialization required"
-                        : null,
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= CONTACT INFORMATION =================
-              sectionCard(
-                title: "Contact Information",
-                children: [
-                  // Email (read-only)
-                  _buildInfoField(
-                    icon: Icons.email,
-                    label: "Email (Cannot be changed)",
-                    controller: emailController,
-                    enabled: false,
-                  ),
-                  // Phone
-                  _buildInfoField(
-                    icon: Icons.phone,
-                    label: "Phone",
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return "Phone is required";
-                      if (v.length != 11 || int.tryParse(v) == null) {
-                        return "Phone must be 11 digits";
-                      }
-                      return null;
-                    },
-                  ),
-                  // Clinic / Location
-                  _buildInfoField(
-                    icon: Icons.location_on,
-                    label: "Clinic / Location",
-                    controller: locationController,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "Clinic is required" : null,
-                  ),
-                  // Fees
-                  _buildInfoField(
-                    icon: Icons.attach_money,
-                    label: "Consultation Fees (EGP)",
-                    controller: feesController,
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return "Fees required";
-                      if (double.tryParse(v) == null) {
-                        return "Enter valid number";
-                      }
-                      return null;
-                    },
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= EDUCATION =================
-              sectionCard(
-                title: "Education",
-                children: [
-                  // University
-                  _buildInfoField(
-                    icon: Icons.account_balance,
-                    label: "University",
-                    controller: universityController,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "University required" : null,
-                  ),
-                  // Certificate
-                  _buildInfoField(
-                    icon: Icons.workspace_premium,
-                    label: "Certificate / Degree",
-                    controller: certificateController,
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? "Certificate required"
-                        : null,
-                    isLast: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= ABOUT =================
-              sectionCard(
-                title: "About Doctor",
-                children: [
-                  TextFormField(
-                    controller: aboutController,
-                    maxLines: 4,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? "About is required" : null,
-                    decoration: InputDecoration(
-                      hintText: "Write about the doctor...",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 100),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _confirmLogout,
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color.fromARGB(255, 255, 255, 255),
-                    ),
-                    label: const Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 249, 247, 247),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
                   ),
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      "Edit Profile",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
 
-              const SizedBox(height: 80),
+          const SizedBox(height: 28),
+
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Container(
+                width: 155,
+                height: 155,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: profileImageUrl != null
+                      ? Image.network(profileImageUrl!, fit: BoxFit.cover)
+                      : _buildDefaultAvatar(),
+                ),
+              ),
+
+              GestureDetector(
+                onTap: pickProfileImage,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: isUploadingImage
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.camera_alt,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          Text(
+            nameDisplay,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 38,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            specializationController.text.isEmpty
+                ? "Doctor"
+                : specializationController.text,
+            style: const TextStyle(color: Colors.white70, fontSize: 18),
+          ),
+
+          const SizedBox(height: 18),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Verified Doctor',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xffDDF2EC)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 16),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xff00A99D), Color(0xff18C08F)],
+              ),
+            ),
+            child: const Icon(
+              Icons.medical_services,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Professional Doctor",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  "Keep your profile updated.",
+                  style: TextStyle(color: Colors.grey, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfessionalSection() {
+    return buildCard(
+      title: 'Professional Information',
+      icon: Icons.medical_services,
+      children: [
+        buildField(
+          controller: specializationController,
+          label: 'Specialization',
+          icon: Icons.local_hospital,
+        ),
+        buildField(
+          controller: feesController,
+          label: 'Consultation Fees',
+          icon: Icons.attach_money,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactSection() {
+    return buildCard(
+      title: 'Contact Information',
+      icon: Icons.contact_phone,
+      children: [
+        buildField(
+          controller: emailController,
+          label: 'Email',
+          icon: Icons.email,
+          enabled: false,
+        ),
+        buildField(
+          controller: phoneController,
+          label: 'Phone',
+          icon: Icons.phone,
+        ),
+        buildField(
+          controller: locationController,
+          label: 'Clinic Location',
+          icon: Icons.location_on,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEducationSection() {
+    return buildCard(
+      title: 'Education',
+      icon: Icons.school,
+      children: [
+        buildField(
+          controller: universityController,
+          label: 'University',
+          icon: Icons.school,
+        ),
+        buildField(
+          controller: certificateController,
+          label: 'Certificate',
+          icon: Icons.workspace_premium,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAboutSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Color(0xffE8F7F5),
+                    child: Icon(Icons.info, color: AppColors.primary),
+                  ),
+                  SizedBox(width: 14),
+                  Text(
+                    "About Doctor",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              TextFormField(
+                controller: aboutController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Write about the doctor...',
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.all(20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -599,109 +679,39 @@ class _DoctorProfileState extends State<DoctorProfile> {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.only(top: 40, bottom: 40, left: 20, right: 20),
-      decoration: const BoxDecoration(
-        gradient: unifiedGradient,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(35),
-          bottomRight: Radius.circular(35),
-        ),
-      ),
-      child: SafeArea(
-        top: true,
+  Widget _buildSettingsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Image with Delete Button
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                GestureDetector(
-                  onTap: isUploadingImage ? null : pickProfileImage,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: profileImageUrl != null
-                            ? NetworkImage(profileImageUrl!)
-                            : null,
-                        child: profileImageUrl == null
-                            ? const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 30,
-                              )
-                            : null,
-                      ),
-                      if (isUploadingImage)
-                        const Positioned.fill(
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // Delete button (only show when image exists)
-                if (profileImageUrl != null && !isUploadingImage)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: deleteProfileImage,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade600,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.delete_forever,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 15),
-            Text(
-              nameDisplay,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xffE8F7F5),
+                child: Icon(Icons.settings, color: AppColors.primary),
               ),
+              title: const Text('Settings'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                );
+              },
             ),
 
-            const SizedBox(height: 4),
-            Text(
-              specializationController.text.isEmpty
-                  ? "No Specialization"
-                  : specializationController.text,
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            const Divider(height: 0),
+
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.red.withOpacity(0.1),
+                child: const Icon(Icons.logout, color: Colors.red),
+              ),
+              title: const Text('Logout'),
+              onTap: _logout,
             ),
           ],
         ),
@@ -709,116 +719,100 @@ class _DoctorProfileState extends State<DoctorProfile> {
     );
   }
 
-  Widget _buildInfoField({
+  Widget buildCard({
+    required String title,
     required IconData icon,
-    required String label,
-    required TextEditingController controller,
-    String? Function(String?)? validator,
-    TextInputType keyboardType = TextInputType.text,
-    bool isLast = false,
-    bool enabled = true,
+    required List<Widget> children,
   }) {
-    Widget inputField = TextFormField(
-      controller: controller,
-      maxLines: label.contains("About") ? 4 : 1,
-      keyboardType: keyboardType,
-      enabled: enabled,
-      validator: (v) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
-        return validator?.call(v);
-      },
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          fontSize: 14,
-          color: (validator?.call(controller.text) != null)
-              ? Colors.red
-              : enabled
-              ? Colors.grey[700]
-              : Colors.grey[500],
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.never,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        isDense: true,
-        errorText: validator?.call(controller.text),
-        errorStyle: const TextStyle(fontSize: 13, color: Colors.red),
-        errorMaxLines: 2,
-      ),
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: enabled ? Colors.black87 : Colors.grey,
-      ),
-    );
-
-    return Container(
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: lightIconBackground,
-                ),
-                child: Icon(icon, color: primaryIconColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: (validator?.call(controller.text) != null)
-                            ? Colors.red
-                            : Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    inputField,
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget sectionCard({required String title, required List<Widget> children}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 4,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         child: Padding(
-          padding: const EdgeInsets.all(25),
+          padding: const EdgeInsets.all(22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: const Color(0xffE8F7F5),
+                    child: Icon(icon, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 15),
+
+              const SizedBox(height: 24),
+
               ...children,
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool enabled = true,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xffE6EAF0)),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: CircleAvatar(
+          radius: 28,
+          backgroundColor: const Color(0xffE8F7F5),
+          child: Icon(icon, color: AppColors.primary),
+        ),
+        title: Text(
+          label,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            controller.text.isEmpty ? "Not Added" : controller.text,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        trailing: Icon(
+          enabled ? Icons.edit_outlined : Icons.lock_outline,
+          color: enabled ? AppColors.primary : Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xff4FC3F7), Color(0xff81C784)],
+        ),
+      ),
+      child: const Icon(Icons.person, size: 60, color: Colors.white),
     );
   }
 }

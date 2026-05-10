@@ -1,0 +1,18 @@
+$kind: http-request
+name: Update Patient Medical Conditions
+method: PUT
+url: '{{baseUrl}}/api/doctors/patients/{{patientId}}/medical-conditions'
+order: 9000
+headers: 
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+body: 
+  type: json
+  content: |-
+    {
+      "medicalConditions": ["Hypertension", "Type 2 Diabetes", "Asthma"]
+    }
+

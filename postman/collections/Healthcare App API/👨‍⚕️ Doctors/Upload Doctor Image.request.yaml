@@ -1,0 +1,18 @@
+$kind: http-request
+name: Upload Doctor Image
+method: POST
+url: '{{baseUrl}}/api/doctors/upload-image'
+order: 6000
+headers: 
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+body: 
+  type: formdata
+  content: 
+    - key: image
+      type: file
+      src: ''
+      description: Select a profile image (JPEG/PNG/WebP, max 5MB)
+
+

@@ -1,0 +1,29 @@
+$kind: collection
+name: Healthcare App API
+description: |-
+  Complete REST API collection for Healthcare Mobile App (Flutter)
+  
+  ## Setup
+  1. Set `baseUrl` variable to your server URL (default: http://localhost:5000)
+  2. Register a user to get a token
+  3. The token is auto-saved to `authToken` variable after login/register
+  
+  ## Roles
+  - **Doctor**: Can manage profile, view/manage appointments, update patient medical conditions
+  - **Patient**: Can manage personal info, book appointments, view medical conditions (read-only)
+variables:
+  - key: baseUrl
+    value: 'http://localhost:5000'
+    type: string
+  - key: authToken
+    value: ''
+    type: string
+  - key: doctorId
+    value: ''
+    type: string
+  - key: patientId
+    value: ''
+    type: string
+  - key: appointmentId
+    value: ''
+    type: string

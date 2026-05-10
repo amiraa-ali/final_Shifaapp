@@ -1,0 +1,9 @@
+$kind: http-request
+name: Filter Doctors by Specialization
+method: GET
+url: '{{baseUrl}}/api/doctors?specialization=Cardiology'
+order: 3000
+queryParams: 
+  - key: specialization
+    value: Cardiology
+

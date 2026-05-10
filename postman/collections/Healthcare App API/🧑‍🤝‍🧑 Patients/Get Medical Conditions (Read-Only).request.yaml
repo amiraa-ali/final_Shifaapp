@@ -1,0 +1,9 @@
+$kind: http-request
+name: Get Medical Conditions (Read-Only)
+method: GET
+url: '{{baseUrl}}/api/patients/medical-conditions'
+order: 3000
+headers: 
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+

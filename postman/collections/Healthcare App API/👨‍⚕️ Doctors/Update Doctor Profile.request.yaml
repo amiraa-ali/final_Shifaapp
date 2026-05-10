@@ -1,0 +1,37 @@
+$kind: http-request
+name: Update Doctor Profile
+method: PUT
+url: '{{baseUrl}}/api/doctors/profile'
+order: 5000
+headers: 
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+body: 
+  type: json
+  content: |-
+    {
+      "name": "Dr. Ahmed Hassan",
+      "specialization": "Cardiology",
+      "fees": 150,
+      "about": "Experienced cardiologist with 10+ years of practice.",
+      "clinicLocation": "Cairo Medical Center, Floor 3",
+      "university": "Cairo University",
+      "availability": [
+        {
+          "day": "Monday",
+          "startTime": "09:00",
+          "endTime": "17:00",
+          "isAvailable": true
+        },
+        {
+          "day": "Wednesday",
+          "startTime": "10:00",
+          "endTime": "15:00",
+          "isAvailable": true
+        }
+      ]
+    }
+

@@ -1,0 +1,17 @@
+$kind: http-request
+name: Get Doctor Appointments (All)
+method: GET
+url: '{{baseUrl}}/api/appointments/doctor?filter=all&page=1&limit=10'
+order: 2000
+headers: 
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+queryParams: 
+  - key: filter
+    value: all
+  - key: page
+    value: 1
+  - key: limit
+    value: 10
+

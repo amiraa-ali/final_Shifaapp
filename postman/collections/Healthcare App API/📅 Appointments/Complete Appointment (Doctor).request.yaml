@@ -1,0 +1,18 @@
+$kind: http-request
+name: Complete Appointment (Doctor)
+method: PUT
+url: '{{baseUrl}}/api/appointments/{{appointmentId}}/complete'
+order: 10000
+headers: 
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+body: 
+  type: json
+  content: |-
+    {
+      "doctorNotes": "Patient blood pressure is stable. Continue current medication. Follow-up in 3 months."
+    }
+

@@ -77,9 +77,7 @@ class AppointmentCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -101,7 +99,9 @@ class AppointmentCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        doctorName.isNotEmpty ? doctorName[0].toUpperCase() : 'D',
+                        doctorName.isNotEmpty
+                            ? doctorName[0].toUpperCase()
+                            : 'D',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -279,11 +279,7 @@ class _InfoRow extends StatelessWidget {
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: color,
-          ),
+          child: Icon(icon, size: 16, color: color),
         ),
         const SizedBox(width: 8),
         Expanded(

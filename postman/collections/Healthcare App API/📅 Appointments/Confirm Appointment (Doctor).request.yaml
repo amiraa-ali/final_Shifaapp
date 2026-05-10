@@ -1,0 +1,9 @@
+$kind: http-request
+name: Confirm Appointment (Doctor)
+method: PUT
+url: '{{baseUrl}}/api/appointments/{{appointmentId}}/confirm'
+order: 9000
+headers: 
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+

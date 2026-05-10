@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'shifaapp-f9163.firebasestorage.app',
     measurementId: 'G-TZLWNCSH83',
   );
-
 }

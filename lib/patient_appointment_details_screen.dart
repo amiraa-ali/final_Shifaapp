@@ -45,7 +45,8 @@ class AppointmentDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final doctorName = appointmentData['doctorName'] ?? 'Doctor';
     final doctorSpecialty = appointmentData['doctorSpecialty'] ?? 'Specialist';
-    final appointmentDate = (appointmentData['appointmentDate'] as Timestamp).toDate();
+    final appointmentDate = (appointmentData['appointmentDate'] as Timestamp)
+        .toDate();
     final appointmentTime = appointmentData['appointmentTime'] ?? '00:00';
     final status = appointmentData['status'] ?? 'upcoming';
     final fees = (appointmentData['fees'] as num?)?.toDouble() ?? 0.0;
@@ -58,10 +59,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Appointment Details',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.teal,
         elevation: 0,
@@ -90,8 +88,8 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     status.toLowerCase() == 'upcoming'
                         ? Icons.upcoming
                         : status.toLowerCase() == 'completed'
-                            ? Icons.check_circle
-                            : Icons.cancel,
+                        ? Icons.check_circle
+                        : Icons.cancel,
                     size: 64,
                     color: Colors.white,
                   ),
@@ -108,10 +106,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Appointment ID: ${appointmentId.substring(0, 8).toUpperCase()}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white70,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
               ),
@@ -135,7 +130,9 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        doctorName.isNotEmpty ? doctorName[0].toUpperCase() : 'D',
+                        doctorName.isNotEmpty
+                            ? doctorName[0].toUpperCase()
+                            : 'D',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -157,10 +154,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     doctorSpecialty,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -275,11 +269,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
                     color: Colors.teal.shade50,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: Colors.teal.shade700,
-                  ),
+                  child: Icon(icon, size: 20, color: Colors.teal.shade700),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -315,11 +305,7 @@ class AppointmentDetailsScreen extends StatelessWidget {
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            size: 24,
-            color: color,
-          ),
+          child: Icon(icon, size: 24, color: color),
         ),
         const SizedBox(width: 16),
         Expanded(

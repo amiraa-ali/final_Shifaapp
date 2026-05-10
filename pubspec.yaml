@@ -18,6 +18,7 @@ dependencies:
   cloud_firestore: ^6.1.0
   awesome_dialog: ^3.3.0
   intl: ^0.18.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

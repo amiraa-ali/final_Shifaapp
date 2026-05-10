@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "Healthcare App API",
+    "description": "Complete REST API collection for Healthcare Mobile App (Flutter)\n\n## Setup\n1. Set `baseUrl` variable to your server URL (default: http://localhost:5000)\n2. Register a user to get a token\n3. The token is auto-saved to `authToken` variable after login/register\n\n## Roles\n- **Doctor**: Can manage profile, view/manage appointments, update patient medical conditions\n- **Patient**: Can manage personal info, book appointments, view medical conditions (read-only)",
+    "_postman_id": "healthcare-api-collection-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "doctorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "patientId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "appointmentId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register Doctor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const res = pm.response.json();",
+                  "  pm.collectionVariables.set('authToken', res.data.token);",
+                  "  pm.collectionVariables.set('doctorId', res.data.user._id);",
+                  "  pm.test('Registration successful', () => pm.expect(res.success).to.be.true);",
+                  "  pm.test('Token received', () => pm.expect(res.data.token).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Ahmed Hassan\",\n  \"email\": \"doctor@healthcare.com\",\n  \"password\": \"password123\",\n  \"role\": \"doctor\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"]}
+          }
+        },
+        {
+          "name": "Register Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const res = pm.response.json();",
+                  "  pm.collectionVariables.set('authToken', res.data.token);",
+                  "  pm.collectionVariables.set('patientId', res.data.user._id);",
+                  "  pm.test('Registration successful', () => pm.expect(res.success).to.be.true);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sara Ali\",\n  \"email\": \"patient@healthcare.com\",\n  \"password\": \"password123\",\n  \"role\": \"patient\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"]}
+          }
+        },
+        {
+          "name": "Login Doctor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const res = pm.response.json();",
+                  "  pm.collectionVariables.set('authToken', res.data.token);",
+                  "  pm.test('Login successful', () => pm.expect(res.success).to.be.true);",
+                  "  pm.test('Token received', () => pm.expect(res.data.token).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@healthcare.com\",\n  \"password\": \"password123\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"]}
+          }
+        },
+        {
+          "name": "Login Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const res = pm.response.json();",
+                  "  pm.collectionVariables.set('authToken', res.data.token);",
+                  "  pm.test('Login successful', () => pm.expect(res.success).to.be.true);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient@healthcare.com\",\n  \"password\": \"password123\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"]}
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"]}
+          }
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword456\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/auth/update-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "update-password"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍⚕️ Doctors",
+      "item": [
+        {
+          "name": "Get All Doctors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": "", "disabled": true},
+                {"key": "specialization", "value": "", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Doctors by Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors?search=Ahmed&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors"],
+              "query": [
+                {"key": "search", "value": "Ahmed"},
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Doctors by Specialization",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors?specialization=Cardiology",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors"],
+              "query": [{"key": "specialization", "value": "Cardiology"}]
+            }
+          }
+        },
+        {
+          "name": "Get Doctor by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/api/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "{{doctorId}}"]}
+          }
+        },
+        {
+          "name": "Update Doctor Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Ahmed Hassan\",\n  \"specialization\": \"Cardiology\",\n  \"fees\": 150,\n  \"about\": \"Experienced cardiologist with 10+ years of practice.\",\n  \"clinicLocation\": \"Cairo Medical Center, Floor 3\",\n  \"university\": \"Cairo University\",\n  \"availability\": [\n    {\n      \"day\": \"Monday\",\n      \"startTime\": \"09:00\",\n      \"endTime\": \"17:00\",\n      \"isAvailable\": true\n    },\n    {\n      \"day\": \"Wednesday\",\n      \"startTime\": \"10:00\",\n      \"endTime\": \"15:00\",\n      \"isAvailable\": true\n    }\n  ]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/doctors/profile", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "profile"]}
+          }
+        },
+        {
+          "name": "Upload Doctor Image",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{"key": "image", "type": "file", "src": "", "description": "Select a profile image (JPEG/PNG/WebP, max 5MB)"}]
+            },
+            "url": {"raw": "{{baseUrl}}/api/doctors/upload-image", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "upload-image"]}
+          }
+        },
+        {
+          "name": "Get Completed Appointments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/appointments/completed?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors", "appointments", "completed"],
+              "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Get Total Patients Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/doctors/stats/patients", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "stats", "patients"]}
+          }
+        },
+        {
+          "name": "Update Patient Medical Conditions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicalConditions\": [\"Hypertension\", \"Type 2 Diabetes\", \"Asthma\"]\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/doctors/patients/{{patientId}}/medical-conditions", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "patients", "{{patientId}}", "medical-conditions"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧑‍🤝‍🧑 Patients",
+      "item": [
+        {
+          "name": "Get Patient Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/patients/profile", "host": ["{{baseUrl}}"], "path": ["api", "patients", "profile"]}
+          }
+        },
+        {
+          "name": "Update Patient Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sara Ali\",\n  \"phone\": \"+20 100 123 4567\",\n  \"location\": \"Alexandria, Egypt\",\n  \"dateOfBirth\": \"1995-06-15\",\n  \"bloodType\": \"O+\",\n  \"allergies\": [\"Penicillin\", \"Pollen\"],\n  \"emergencyContact\": {\n    \"name\": \"Mohamed Ali\",\n    \"phone\": \"+20 100 987 6543\",\n    \"relation\": \"Father\"\n  }\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/patients/profile", "host": ["{{baseUrl}}"], "path": ["api", "patients", "profile"]}
+          }
+        },
+        {
+          "name": "Get Medical Conditions (Read-Only)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/patients/medical-conditions", "host": ["{{baseUrl}}"], "path": ["api", "patients", "medical-conditions"]}
+          }
+        },
+        {
+          "name": "Upload Patient Image",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{"key": "image", "type": "file", "src": "", "description": "Select a profile image (JPEG/PNG/WebP, max 5MB)"}]
+            },
+            "url": {"raw": "{{baseUrl}}/api/patients/upload-image", "host": ["{{baseUrl}}"], "path": ["api", "patients", "upload-image"]}
+          }
+        },
+        {
+          "name": "Get Patient by ID (Doctor Only)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/patients/{{patientId}}", "host": ["{{baseUrl}}"], "path": ["api", "patients", "{{patientId}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 Appointments",
+      "item": [
+        {
+          "name": "Create Appointment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const res = pm.response.json();",
+                  "  pm.collectionVariables.set('appointmentId', res.data._id);",
+                  "  pm.test('Appointment created', () => pm.expect(res.success).to.be.true);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctorId\": \"{{doctorId}}\",\n  \"appointmentDate\": \"2025-02-15T10:00:00.000Z\",\n  \"notes\": \"Regular checkup for blood pressure monitoring\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/appointments", "host": ["{{baseUrl}}"], "path": ["api", "appointments"]}
+          }
+        },
+        {
+          "name": "Get Doctor Appointments (All)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/doctor?filter=all&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "doctor"],
+              "query": [{"key": "filter", "value": "all"}, {"key": "page", "value": "1"}, {"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Get Doctor Upcoming Appointments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/doctor?filter=upcoming",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "doctor"],
+              "query": [{"key": "filter", "value": "upcoming"}]
+            }
+          }
+        },
+        {
+          "name": "Get Doctor Past Appointments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/doctor?filter=past",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "doctor"],
+              "query": [{"key": "filter", "value": "past"}]
+            }
+          }
+        },
+        {
+          "name": "Get Patient Appointments (All)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/patient?filter=all&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "patient"],
+              "query": [{"key": "filter", "value": "all"}, {"key": "page", "value": "1"}, {"key": "limit", "value": "10"}]
+            }
+          }
+        },
+        {
+          "name": "Get Patient Upcoming Appointments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/patient?filter=upcoming",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "patient"],
+              "query": [{"key": "filter", "value": "upcoming"}]
+            }
+          }
+        },
+        {
+          "name": "Get Patient Past Appointments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/patient?filter=past",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "patient"],
+              "query": [{"key": "filter", "value": "past"}]
+            }
+          }
+        },
+        {
+          "name": "Get Appointment by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/appointments/{{appointmentId}}", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}"]}
+          }
+        },
+        {
+          "name": "Confirm Appointment (Doctor)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}", "confirm"]}
+          }
+        },
+        {
+          "name": "Complete Appointment (Doctor)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctorNotes\": \"Patient blood pressure is stable. Continue current medication. Follow-up in 3 months.\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/complete", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}", "complete"]}
+          }
+        },
+        {
+          "name": "Cancel Appointment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{authToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancelReason\": \"Patient requested cancellation due to schedule conflict\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "appointments", "{{appointmentId}}", "cancel"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "Server Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Server is healthy', () => pm.expect(pm.response.code).to.equal(200));",
+                  "pm.test('Response has success field', () => pm.expect(pm.response.json().success).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"]}
+          }
+        }
+      ]
+    }
+  ]
+}

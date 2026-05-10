@@ -37,49 +37,63 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
       return [
         {
           'senderId': 'patient',
-          'message': 'Good morning doctor! I wanted to discuss my test results.',
+          'message':
+              'Good morning doctor! I wanted to discuss my test results.',
           'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Good morning! I\'ve reviewed your results.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 58)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 58),
+          ),
           'isPatient': false,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Your cholesterol levels have improved significantly!',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 57)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 57),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'That\'s wonderful news! Thank you doctor 😊',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 55),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Keep taking your medication as prescribed.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 50),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Should I continue with the same dosage?',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 45),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Yes, continue with the current dosage.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 40)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 1, minutes: 40),
+          ),
           'isPatient': false,
         },
         {
           'senderId': widget.doctorId,
-          'message': 'Your test results look good. Keep up with the medication.',
+          'message':
+              'Your test results look good. Keep up with the medication.',
           'timestamp': DateTime.now().subtract(const Duration(minutes: 15)),
           'isPatient': false,
         },
@@ -95,31 +109,42 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
         {
           'senderId': widget.doctorId,
           'message': 'You\'re welcome! How are you feeling today?',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 4, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 4, minutes: 55),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Much better! The fever has gone down.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 4, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 4, minutes: 50),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Great! Continue the antibiotics for the full course.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 4, minutes: 45)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 4, minutes: 45),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Will do. Should I schedule a follow-up?',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 4, minutes: 40)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 4, minutes: 40),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
-          'message': 'Let\'s see how you feel in a week. If symptoms persist, come back.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 4, minutes: 35)),
+          'message':
+              'Let\'s see how you feel in a week. If symptoms persist, come back.',
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 4, minutes: 35),
+          ),
           'isPatient': false,
         },
         {
@@ -140,31 +165,42 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
         {
           'senderId': widget.doctorId,
           'message': 'I see. Have you been applying the cream I prescribed?',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 9, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 9, minutes: 55),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Yes, but only once a day.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 9, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 9, minutes: 50),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
-          'message': 'That\'s the issue. Apply it twice daily - morning and evening.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 9, minutes: 45)),
+          'message':
+              'That\'s the issue. Apply it twice daily - morning and evening.',
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 9, minutes: 45),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Oh! I misunderstood. I\'ll do that now.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 9, minutes: 40)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 9, minutes: 40),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Also avoid scratching. It can cause infection.',
-          'timestamp': DateTime.now().subtract(const Duration(hours: 9, minutes: 35)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(hours: 9, minutes: 35),
+          ),
           'isPatient': false,
         },
         {
@@ -179,31 +215,42 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
         {
           'senderId': 'patient',
           'message': 'Good afternoon doctor! Got my X-ray done today.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1, hours: 4)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 1, hours: 4),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Perfect timing! Let me review it.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1, hours: 3, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 1, hours: 3, minutes: 55),
+          ),
           'isPatient': false,
         },
         {
           'senderId': widget.doctorId,
           'message': 'The fracture is healing nicely!',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1, hours: 3, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 1, hours: 3, minutes: 50),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'That\'s a relief! When can I start exercising?',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1, hours: 3, minutes: 45)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 1, hours: 3, minutes: 45),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
-          'message': 'Give it another 2 weeks, then start with light exercises.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1, hours: 3, minutes: 40)),
+          'message':
+              'Give it another 2 weeks, then start with light exercises.',
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 1, hours: 3, minutes: 40),
+          ),
           'isPatient': false,
         },
         {
@@ -218,37 +265,49 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
         {
           'senderId': 'patient',
           'message': 'Hello doctor, my son had a fever this morning.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 6)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 6),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'How high is the temperature?',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 5, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 5, minutes: 55),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': '38.5°C. He\'s also complaining of a sore throat.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 5, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 5, minutes: 50),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Give him paracetamol for fever and plenty of fluids.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 5, minutes: 45)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 5, minutes: 45),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Should I bring him in for a check-up?',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 5, minutes: 40)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 5, minutes: 40),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
           'message': 'Monitor him for 24 hours. If fever persists, yes.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 2, hours: 5, minutes: 35)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 2, hours: 5, minutes: 35),
+          ),
           'isPatient': false,
         },
         {
@@ -269,19 +328,26 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
         {
           'senderId': widget.doctorId,
           'message': 'Tell me more about when they occur.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 3, hours: 23, minutes: 55)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 3, hours: 23, minutes: 55),
+          ),
           'isPatient': false,
         },
         {
           'senderId': 'patient',
           'message': 'Usually in the evening after work.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 3, hours: 23, minutes: 50)),
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 3, hours: 23, minutes: 50),
+          ),
           'isPatient': true,
         },
         {
           'senderId': widget.doctorId,
-          'message': 'Sounds like tension headaches. Try to take breaks and reduce screen time.',
-          'timestamp': DateTime.now().subtract(const Duration(days: 3, hours: 23, minutes: 45)),
+          'message':
+              'Sounds like tension headaches. Try to take breaks and reduce screen time.',
+          'timestamp': DateTime.now().subtract(
+            const Duration(days: 3, hours: 23, minutes: 45),
+          ),
           'isPatient': false,
         },
         {
@@ -374,10 +440,7 @@ class _PatientChatDetailScreenState extends State<PatientChatDetailScreen> {
                   ),
                   Text(
                     widget.specialty,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -504,8 +567,9 @@ class MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment:
-            isPatient ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isPatient
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isPatient) ...[

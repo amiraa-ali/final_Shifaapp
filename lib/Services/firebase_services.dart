@@ -1,9 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class FirebaseServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  CollectionReference<Map<String, dynamic>> get doctorsCollection =>
+      _firestore.collection('doctors');
+
+  CollectionReference<Map<String, dynamic>> get patientsCollection =>
+      _firestore.collection('patients');
+
+  CollectionReference<Map<String, dynamic>> get appointmentsCollection =>
+      _firestore.collection('appointments');
+
+  CollectionReference<Map<String, dynamic>> get chatsCollection =>
+      _firestore.collection('chats');
 
   // ==================== AUTH & USER STATE ====================
 
@@ -71,7 +83,7 @@ class FirebaseServices {
       // Sign in with LinkedIn
       return await _auth.signInWithProvider(linkedInProvider);
     } catch (e) {
-      print('LinkedIn sign in error: $e');
+      debugPrint('LinkedIn sign in error: $e');
       rethrow;
     }
   }
@@ -96,7 +108,7 @@ class FirebaseServices {
 
       return true;
     } catch (e) {
-      print('Create patient from social auth error: $e');
+      debugPrint('Create patient from social auth error: $e');
       return false;
     }
   }
@@ -129,7 +141,7 @@ class FirebaseServices {
 
       return true;
     } catch (e) {
-      print('Create doctor from social auth error: $e');
+      debugPrint('Create doctor from social auth error: $e');
       return false;
     }
   }
@@ -152,17 +164,18 @@ class FirebaseServices {
           .get();
 
       if (!doc.exists) {
+        debugPrint('This account is not registered as a doctor');
         await _auth.signOut();
         throw Exception('This account is not registered as a doctor');
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      print("AUTH ERROR CODE: ${e.code}");
-      print("AUTH ERROR MESSAGE: ${e.message}");
+      debugPrint("AUTH ERROR CODE: ${e.code}");
+      debugPrint("AUTH ERROR MESSAGE: ${e.message}");
       rethrow;
     } catch (e) {
-      print('Doctor sign in error: $e');
+      debugPrint('Doctor sign in error: $e');
       rethrow;
     }
   }
@@ -196,7 +209,7 @@ class FirebaseServices {
 
       return userCredential;
     } catch (e) {
-      print('Doctor sign up error: $e');
+      debugPrint('Doctor sign up error: $e');
       rethrow;
     }
   }
@@ -212,7 +225,7 @@ class FirebaseServices {
 
       return query.docs.isNotEmpty;
     } catch (e) {
-      print('Check doctor email error: $e');
+      debugPrint('Check doctor email error: $e');
       return false;
     }
   }
@@ -235,17 +248,18 @@ class FirebaseServices {
           .get();
 
       if (!doc.exists) {
+        debugPrint('This account is not registered as a patient');
         await _auth.signOut();
         throw Exception('This account is not registered as a patient');
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      print("PATIENT AUTH ERROR CODE: ${e.code}");
-      print("PATIENT AUTH ERROR MESSAGE: ${e.message}");
+      debugPrint("PATIENT AUTH ERROR CODE: ${e.code}");
+      debugPrint("PATIENT AUTH ERROR MESSAGE: ${e.message}");
       rethrow;
     } catch (e) {
-      print('Patient sign in error: $e');
+      debugPrint('Patient sign in error: $e');
       rethrow;
     }
   }
@@ -276,7 +290,7 @@ class FirebaseServices {
 
       return userCredential;
     } catch (e) {
-      print('Patient sign up error: $e');
+      debugPrint('Patient sign up error: $e');
       rethrow;
     }
   }
@@ -291,7 +305,7 @@ class FirebaseServices {
           .get();
       return doc.exists ? doc.data() as Map<String, dynamic> : null;
     } catch (e) {
-      print('Get doctor profile error: $e');
+      debugPrint('Get doctor profile error: $e');
       return null;
     }
   }
@@ -304,7 +318,7 @@ class FirebaseServices {
       await _firestore.collection('doctors').doc(doctorId).update(data);
       return true;
     } catch (e) {
-      print('Update doctor profile error: $e');
+      debugPrint('Update doctor profile error: $e');
       return false;
     }
   }
@@ -330,7 +344,7 @@ class FirebaseServices {
           .get();
       return doc.exists ? doc.data() as Map<String, dynamic> : null;
     } catch (e) {
-      print('Get doctor by ID error: $e');
+      debugPrint('Get doctor by ID error: $e');
       return null;
     }
   }
@@ -400,7 +414,7 @@ class FirebaseServices {
 
       return appointmentRef.id;
     } catch (e) {
-      print('Create appointment error: $e');
+      debugPrint('Create appointment error: $e');
       rethrow;
     }
   }
@@ -512,7 +526,7 @@ class FirebaseServices {
       });
       return true;
     } catch (e) {
-      print('Update appointment error: $e');
+      debugPrint('Update appointment error: $e');
       return false;
     }
   }
@@ -533,7 +547,7 @@ class FirebaseServices {
           .get();
       return doc.exists ? doc.data() as Map<String, dynamic> : null;
     } catch (e) {
-      print('Get appointment error: $e');
+      debugPrint('Get appointment error: $e');
       return null;
     }
   }
@@ -589,7 +603,7 @@ class FirebaseServices {
 
       return true;
     } catch (e) {
-      print('Send message error: $e');
+      debugPrint('Send message error: $e');
       return false;
     }
   }
@@ -641,7 +655,7 @@ class FirebaseServices {
       await batch.commit();
       return true;
     } catch (e) {
-      print('Mark messages as read error: $e');
+      debugPrint('Mark messages as read error: $e');
       return false;
     }
   }
@@ -656,7 +670,7 @@ class FirebaseServices {
           .get();
       return doc.exists ? doc.data() as Map<String, dynamic> : null;
     } catch (e) {
-      print('Get patient info error: $e');
+      debugPrint('Get patient info error: $e');
       return null;
     }
   }
@@ -670,7 +684,7 @@ class FirebaseServices {
       await _firestore.collection('patients').doc(patientId).update(data);
       return true;
     } catch (e) {
-      print('Update patient profile error: $e');
+      debugPrint('Update patient profile error: $e');
       return false;
     }
   }
@@ -698,7 +712,7 @@ class FirebaseServices {
 
       return appointments.docs.length;
     } catch (e) {
-      print('Get today appointment count error: $e');
+      debugPrint('Get today appointment count error: $e');
       return 0;
     }
   }
@@ -718,7 +732,7 @@ class FirebaseServices {
 
       return appointments.docs.length;
     } catch (e) {
-      print('Get upcoming appointment count error: $e');
+      debugPrint('Get upcoming appointment count error: $e');
       return 0;
     }
   }
@@ -740,7 +754,7 @@ class FirebaseServices {
 
       return uniquePatients.length;
     } catch (e) {
-      print('Get total patients count error: $e');
+      debugPrint('Get total patients count error: $e');
       return 0;
     }
   }
@@ -775,7 +789,7 @@ class FirebaseServices {
 
       return total;
     } catch (e) {
-      print('Get monthly revenue error: $e');
+      debugPrint('Get monthly revenue error: $e');
       return 0.0;
     }
   }
@@ -787,7 +801,7 @@ class FirebaseServices {
       await _auth.sendPasswordResetEmail(email: email);
       return true;
     } catch (e) {
-      print('Send password reset email error: $e');
+      debugPrint('Send password reset email error: $e');
       return false;
     }
   }
@@ -802,7 +816,7 @@ class FirebaseServices {
           .get();
       return doc.exists;
     } catch (e) {
-      print('Check doctor role error: $e');
+      debugPrint('Check doctor role error: $e');
       return false;
     }
   }
@@ -815,7 +829,7 @@ class FirebaseServices {
           .get();
       return doc.exists;
     } catch (e) {
-      print('Check patient role error: $e');
+      debugPrint('Check patient role error: $e');
       return false;
     }
   }
@@ -829,7 +843,7 @@ class FirebaseServices {
       }
       return null;
     } catch (e) {
-      print('Get user role error: $e');
+      debugPrint('Get user role error: $e');
       return null;
     }
   }
@@ -854,7 +868,7 @@ class FirebaseServices {
 
       return true;
     } catch (e) {
-      print('Book time slot error: $e');
+      debugPrint('Book time slot error: $e');
       return false;
     }
   }

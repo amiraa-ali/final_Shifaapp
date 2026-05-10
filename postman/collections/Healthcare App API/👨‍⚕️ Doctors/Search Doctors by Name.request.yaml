@@ -1,0 +1,13 @@
+$kind: http-request
+name: Search Doctors by Name
+method: GET
+url: '{{baseUrl}}/api/doctors?search=Ahmed&page=1&limit=10'
+order: 2000
+queryParams: 
+  - key: search
+    value: Ahmed
+  - key: page
+    value: 1
+  - key: limit
+    value: 10
+

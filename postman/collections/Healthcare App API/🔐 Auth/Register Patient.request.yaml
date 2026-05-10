@@ -1,0 +1,30 @@
+$kind: http-request
+name: Register Patient
+method: POST
+url: '{{baseUrl}}/api/auth/register'
+order: 2000
+headers: 
+  - key: Content-Type
+    value: application/json
+
+body: 
+  type: json
+  content: |-
+    {
+      "name": "Sara Ali",
+      "email": "patient@healthcare.com",
+      "password": "password123",
+      "role": "patient"
+    }
+
+scripts: 
+  - type: afterResponse
+    code: |-
+    if (pm.response.code === 201) {
+      const res = pm.response.json();
+      pm.collectionVariables.set('authToken', res.data.token);
+      pm.collectionVariables.set('patientId', res.data.user._id);
+      pm.test('Registration successful', () => pm.expect(res.success).to.be.true);
+    }
+    language: text/javascript
+

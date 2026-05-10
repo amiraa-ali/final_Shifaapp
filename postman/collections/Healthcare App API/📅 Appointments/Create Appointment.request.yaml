@@ -1,0 +1,30 @@
+$kind: http-request
+name: Create Appointment
+method: POST
+url: '{{baseUrl}}/api/appointments'
+order: 1000
+headers: 
+  - key: Content-Type
+    value: application/json
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+
+body: 
+  type: json
+  content: |-
+    {
+      "doctorId": "{{doctorId}}",
+      "appointmentDate": "2025-02-15T10:00:00.000Z",
+      "notes": "Regular checkup for blood pressure monitoring"
+    }
+
+scripts: 
+  - type: afterResponse
+    code: |-
+    if (pm.response.code === 201) {
+      const res = pm.response.json();
+      pm.collectionVariables.set('appointmentId', res.data._id);
+      pm.test('Appointment created', () => pm.expect(res.success).to.be.true);
+    }
+    language: text/javascript
+
