@@ -1,46 +1,125 @@
 import 'package:flutter/material.dart';
-import 'package:shifa/Services/firebase_services.dart';
+
+import 'package:shifa/Services/auth_service.dart';
 import 'package:shifa/doctor_home_screen.dart';
 import 'package:shifa/patient_home_screen.dart';
 import 'package:shifa/welcome.dart';
+import 'package:shifa/app_theme.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final firebaseServices = FirebaseServices();
+  State<AuthGate> createState() => _AuthGateState();
+}
 
-    final user = firebaseServices.getCurrentUser();
+class _AuthGateState extends State<AuthGate> {
+  final AuthService _authService = AuthService();
 
-    if (user == null) {
-      return WelcomeScreen();
+  late Future<String?> _tokenFuture;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _tokenFuture = _initializeAuth();
+  }
+
+  Future<String?> _initializeAuth() async {
+    try {
+      final token = await _authService.getToken();
+
+      return token;
+    } catch (_) {
+      return null;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<String?>(
-      future: firebaseServices.getCurrentUserRole(),
+      future: _tokenFuture,
+
       builder: (context, snapshot) {
+        // ============================================
+        // LOADING
+        // ============================================
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const _LoadingScreen();
         }
 
-        if (snapshot.hasError || snapshot.data == null) {
-          return const Scaffold(
-            body: Center(child: Text('Unable to determine user role')),
-          );
+        // ============================================
+        // NOT LOGGED IN
+        // ============================================
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const WelcomeScreen();
         }
 
-        final role = snapshot.data;
-
-        if (role == 'doctor') {
-          return DoctorHomeScreen();
-        } else if (role == 'patient') {
-          return PatientHomeScreen();
-        }
-
-        return const Scaffold(body: Center(child: Text('Invalid role')));
+        // ============================================
+        // LOGGED IN
+        // ============================================
+        return const PatientHomeScreen();
       },
+    );
+  }
+}
+
+// =====================================================
+// LOADING SCREEN
+// =====================================================
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+
+              decoration: BoxDecoration(
+                gradient: AppColors.mainGradient,
+
+                shape: BoxShape.circle,
+
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.25),
+
+                    blurRadius: 18,
+
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+
+              child: const Icon(
+                Icons.local_hospital,
+                color: Colors.white,
+                size: 42,
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            const CircularProgressIndicator(color: AppColors.primary),
+
+            const SizedBox(height: 18),
+
+            Text(
+              'Loading Shifa...',
+              style: AppText.h3.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

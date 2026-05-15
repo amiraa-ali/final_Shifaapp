@@ -6,21 +6,30 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color primary = Color(0xFF009f93); // teal
-  static const Color secondary = Color(0xFF39ab4a); // green
+  static const Color primary = Color(0xFF009f93);
+
+  static const Color secondary = Color(0xFF39ab4a);
+
   static const Color background = Color(0xFFF6F7FB);
+
   static const Color surface = Colors.white;
+
   static const Color error = Color(0xFFE53935);
+
   static const Color textPrimary = Color(0xFF1A1A2E);
+
   static const Color textSecondary = Color(0xFF6B7280);
+
   static const Color divider = Color(0xFFE5E7EB);
 
-  // Status colours
+  // Status Colors
   static const Color upcoming = Color(0xFF10B981);
+
   static const Color completed = Color(0xFF3B82F6);
+
   static const Color cancelled = Color(0xFFEF4444);
 
-  // Gradient
+  // Main Gradient
   static const LinearGradient mainGradient = LinearGradient(
     colors: [secondary, primary],
     begin: Alignment.bottomRight,
@@ -35,7 +44,7 @@ class AppColors {
 }
 
 // =========================================================
-// APP TEXT STYLES
+// TEXT STYLES
 // =========================================================
 class AppText {
   AppText._();
@@ -86,20 +95,30 @@ class AppTheme {
 
   static ThemeData get light => ThemeData(
     useMaterial3: true,
+
+    fontFamily: 'Roboto',
+
+    scaffoldBackgroundColor: AppColors.background,
+
+    primaryColor: AppColors.primary,
+
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.light,
     ),
-    scaffoldBackgroundColor: AppColors.background,
-    primaryColor: AppColors.primary,
-    fontFamily: 'Roboto',
 
-    // AppBar
+    // =================================================
+    // APP BAR
+    // =================================================
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.primary,
+
       foregroundColor: Colors.white,
+
       elevation: 0,
-      centerTitle: false,
+
+      centerTitle: true,
+
       titleTextStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
@@ -107,64 +126,129 @@ class AppTheme {
       ),
     ),
 
-    // Card
+    // =================================================
+    // CARD
+    // =================================================
     cardTheme: CardThemeData(
       elevation: 2,
+
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
       color: AppColors.surface,
+
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
 
-    // ElevatedButton
+    // =================================================
+    // BUTTON
+    // =================================================
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
+
         foregroundColor: Colors.white,
+
         elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+
         textStyle: AppText.button,
       ),
     ),
 
-    // InputDecoration
+    // =================================================
+    // INPUTS
+    // =================================================
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
+
       fillColor: Colors.grey.shade50,
+
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+
         borderSide: const BorderSide(color: AppColors.divider),
       ),
+
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+
         borderSide: const BorderSide(color: AppColors.divider),
       ),
+
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
+
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+
         borderSide: const BorderSide(color: AppColors.error),
       ),
     ),
 
-    // NavigationBar
+    // =================================================
+    // NAVIGATION BAR
+    // =================================================
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: Colors.white,
-      indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+
+      indicatorColor: AppColors.primary.withOpacity(0.12),
+
       labelTextStyle: WidgetStateProperty.all(
         const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
-      height: 64,
+
+      height: 68,
     ),
 
-    // Divider
+    // =================================================
+    // DIVIDER
+    // =================================================
     dividerTheme: const DividerThemeData(
       color: AppColors.divider,
       thickness: 1,
       space: 1,
+    ),
+
+    // =================================================
+    // SNACKBAR
+    // =================================================
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.primary,
+
+      behavior: SnackBarBehavior.floating,
+
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+
+      contentTextStyle: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+
+    // =================================================
+    // PROGRESS INDICATOR
+    // =================================================
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.primary,
+    ),
+
+    // =================================================
+    // PAGE TRANSITIONS
+    // =================================================
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      },
     ),
   );
 }
@@ -173,11 +257,13 @@ class AppTheme {
 // REUSABLE WIDGETS
 // =========================================================
 
-/// Gradient AppBar used across the app
 class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+
   final List<Widget>? actions;
+
   final Widget? leading;
+
   final double height;
 
   const GradientAppBar({
@@ -198,24 +284,36 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
       ),
+
       leading: leading,
+
       actions: actions,
+
       flexibleSpace: Container(
         decoration: const BoxDecoration(gradient: AppColors.mainGradient),
       ),
+
       backgroundColor: Colors.transparent,
+
       foregroundColor: Colors.white,
+
       elevation: 0,
     );
   }
 }
 
-/// Primary gradient button
+// =========================================================
+// GRADIENT BUTTON
+// =========================================================
 class GradientButton extends StatelessWidget {
   final String label;
+
   final VoidCallback? onPressed;
+
   final bool isLoading;
+
   final double height;
+
   final IconData? icon;
 
   const GradientButton({
@@ -232,47 +330,64 @@ class GradientButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: height,
+
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: onPressed == null
               ? const LinearGradient(colors: [Colors.grey, Colors.grey])
               : AppColors.mainGradient,
-          borderRadius: BorderRadius.circular(12),
+
+          borderRadius: BorderRadius.circular(14),
+
           boxShadow: onPressed == null
               ? []
               : [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
+                    color: AppColors.primary.withOpacity(0.35),
+
                     blurRadius: 12,
+
                     offset: const Offset(0, 4),
                   ),
                 ],
         ),
+
         child: ElevatedButton(
           onPressed: isLoading ? null : onPressed,
+
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
+
             shadowColor: Colors.transparent,
+
+            elevation: 0,
+
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
+
           child: isLoading
               ? const SizedBox(
                   width: 22,
                   height: 22,
+
                   child: CircularProgressIndicator(
                     color: Colors.white,
+
                     strokeWidth: 2,
                   ),
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+
                   children: [
                     if (icon != null) ...[
                       Icon(icon, size: 20),
+
                       const SizedBox(width: 8),
                     ],
+
                     Text(label, style: AppText.button),
                   ],
                 ),
@@ -282,11 +397,16 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-/// Info row used in profile / details cards
+// =========================================================
+// PROFILE INFO TILE
+// =========================================================
 class ProfileInfoTile extends StatelessWidget {
   final IconData icon;
+
   final String label;
+
   final String value;
+
   final Color? iconColor;
 
   const ProfileInfoTile({
@@ -300,24 +420,33 @@ class ProfileInfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = iconColor ?? AppColors.primary;
+
     return Row(
       children: [
         Container(
           width: 40,
           height: 40,
+
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
+
             borderRadius: BorderRadius.circular(10),
           ),
+
           child: Icon(icon, color: color, size: 20),
         ),
+
         const SizedBox(width: 12),
+
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               Text(label, style: AppText.caption),
+
               const SizedBox(height: 2),
+
               Text(value, style: AppText.h3.copyWith(fontSize: 14)),
             ],
           ),

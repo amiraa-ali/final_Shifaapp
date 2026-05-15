@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shifa/patient_login.dart';
 import 'package:shifa/doctor_login.dart';
-
-void main() {
-  runApp(
-    const MaterialApp(debugShowCheckedModeBanner: false, home: WelcomeScreen()),
-  );
-}
+import 'app_theme.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -14,16 +9,16 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Container(color: Colors.white),
-
+          // Decorative circles
           Positioned(
             top: 50,
             left: 30,
             child: CircleAvatar(
               radius: 50,
-              backgroundColor: Colors.teal.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
             ),
           ),
           Positioned(
@@ -31,7 +26,7 @@ class WelcomeScreen extends StatelessWidget {
             right: 50,
             child: CircleAvatar(
               radius: 70,
-              backgroundColor: Colors.teal.withOpacity(0.08),
+              backgroundColor: AppColors.secondary.withValues(alpha: 0.06),
             ),
           ),
           Positioned(
@@ -39,86 +34,147 @@ class WelcomeScreen extends StatelessWidget {
             right: 80,
             child: CircleAvatar(
               radius: 40,
-              backgroundColor: Colors.teal.withOpacity(0.12),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.10),
             ),
           ),
 
           Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset("images/logo.png", fit: BoxFit.cover),
-                const SizedBox(height: 10),
-                const Text(
-                  "Your Smart Health Companion",
-                  style: TextStyle(
-                    color: Colors.teal,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 50),
-
-                // ------------------- زرار Login ---------------------
-                SizedBox(
-                  width: 220,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PatientLogin(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo
+                  Image.asset(
+                    'images/logo.png',
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.mainGradient,
+                        shape: BoxShape.circle,
                       ),
-                      elevation: 3,
-                    ),
-                    child: const Text(
-                      "Continue as a Patient",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // ------------------- زرار Signup ---------------------
-                SizedBox(
-                  width: 220,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DoctorLogin(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.teal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        side: BorderSide(color: Colors.teal),
+                      child: const Icon(
+                        Icons.local_hospital,
+                        size: 60,
+                        color: Colors.white,
                       ),
-                      elevation: 3,
-                    ),
-                    child: const Text(
-                      "Coninue as a Doctor",
-                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 16),
+
+                  ShaderMask(
+                    shaderCallback: (bounds) =>
+                        AppColors.mainGradient.createShader(bounds),
+                    child: const Text(
+                      'Shifa',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    'Your Smart Health Companion',
+                    style: AppText.body.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 60),
+
+                  // Patient button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppColors.mainGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PatientLogin(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.person, color: Colors.white),
+                        label: const Text(
+                          'Continue as a Patient',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Doctor button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DoctorLogin()),
+                      ),
+                      icon: Icon(
+                        Icons.medical_services,
+                        color: AppColors.primary,
+                      ),
+                      label: Text(
+                        'Continue as a Doctor', // ✅ typo fixed
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  Text(
+                    'By continuing you agree to our Terms & Privacy Policy',
+                    textAlign: TextAlign.center,
+                    style: AppText.caption.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -1,28 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:shifa/categories_card.dart';
 import 'package:shifa/doctor_page.dart';
 import 'package:shifa/patient_appointment_screen.dart';
 import 'package:shifa/patient_profile.dart';
-import 'package:shifa/setting_page.dart';
-import 'package:shifa/Services/firebase_services.dart';
 import 'package:shifa/doctor_card.dart';
 import 'package:shifa/patient_chat_screen.dart';
-import 'package:shifa/welcome.dart';
+import 'package:shifa/app_theme.dart';
 
-// Model
+import 'package:shifa/Services/doctor_service.dart';
+import 'package:shifa/Services/auth_service.dart';
+
 class Category {
   final String title;
+
   final IconData icon;
+
   Category(this.title, this.icon);
 }
 
 final List<Category> categories = [
   Category('All', Icons.monitor_heart),
+
   Category('Cardiology', Icons.favorite_border),
+
   Category('Orthopedic', Icons.airline_seat_legroom_extra),
+
   Category('General', Icons.local_hospital_outlined),
+
   Category('Pediatrics', Icons.child_care),
+
   Category('Dentistry', Icons.medical_services_outlined),
 ];
 
@@ -34,465 +41,481 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
-  final FirebaseServices _firebaseServices = FirebaseServices();
-  int index = 0;
-  int _categoryIndex = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final DoctorService _doctorService = DoctorService();
 
-  Map<String, dynamic>? userData;
+  final AuthService _authService = AuthService();
+
+  int index = 0;
+
+  int _categoryIndex = 0;
+
+  List<dynamic> doctors = [];
+
   bool isLoading = true;
+
+  String userName = 'Patient';
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+
+    _loadData();
   }
 
-  Future<void> _loadUserData() async {
+  // =========================
+  // LOAD DATA
+  // =========================
+  Future<void> _loadData() async {
     try {
-      final data = await _firebaseServices.getUserData();
+      final doctorsResult = await _doctorService.getDoctors();
+
+      final profile = await _authService.getPatientProfile();
+
+      if (!mounted) return;
+
       setState(() {
-        userData = data;
+        doctors = doctorsResult;
+
+        userName = profile['name'] ?? 'Patient';
+
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading user data: $e');
+      debugPrint(e.toString());
+
+      if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
     }
   }
 
-  final pages = [
-    const SizedBox.shrink(),
-    const PatientChatScreen(),
-    const MyAppointmentsScreen(),
-    const PatientProfilePage(),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: Colors.grey[50],
+    final pages = [
+      _buildHomeUI(),
 
-      drawer: _buildDrawer(),
+      const PatientChatScreen(),
+
+      const MyAppointmentsScreen(),
+
+      const PatientProfilePage(),
+    ];
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+
+        child: pages[index],
+      ),
 
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
+
+        height: 72,
+
+        backgroundColor: Colors.white,
+
+        indicatorColor: AppColors.primary.withOpacity(0.15),
+
         onDestinationSelected: (i) {
           setState(() {
             index = i;
           });
         },
-        height: 60,
+
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: Colors.teal),
+
+            selectedIcon: Icon(Icons.home, color: AppColors.primary),
+
             label: 'Home',
           ),
+
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat, color: Colors.teal),
+
+            selectedIcon: Icon(Icons.chat, color: AppColors.primary),
+
             label: 'Chat',
           ),
+
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today, color: Colors.teal),
-            label: 'My Appointments',
+
+            selectedIcon: Icon(Icons.calendar_today, color: AppColors.primary),
+
+            label: 'Appointments',
           ),
+
           NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(Icons.person, color: Colors.teal),
+            icon: Icon(Icons.person_outline),
+
+            selectedIcon: Icon(Icons.person, color: AppColors.primary),
+
             label: 'Profile',
           ),
         ],
       ),
-
-      body: index == 0 ? _buildHomeUI() : pages[index],
     );
   }
 
+  // =========================
   // HOME UI
+  // =========================
   Widget _buildHomeUI() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderAndCategories(),
+    return SafeArea(
+      child: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadData,
 
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 80, 20, 10),
-            child: Text(
-              'Available Doctors',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+                    _buildHeader(),
+
+                    const SizedBox(height: 22),
+
+                    _buildSearchBar(),
+
+                    const SizedBox(height: 22),
+
+                    _buildCategories(),
+
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 26, 20, 10),
+
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                        children: [
+                          Text(
+                            'Top Doctors',
+
+                            style: TextStyle(
+                              fontSize: 22,
+
+                              fontWeight: FontWeight.bold,
+
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    _buildDoctorsSection(),
+
+                    const SizedBox(height: 30),
+                  ],
+                ),
               ),
             ),
-          ),
-
-          // Real-time doctors from Firebase
-          StreamBuilder<QuerySnapshot>(
-            stream: _firebaseServices.getTopRatedDoctors(limit: 5),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(color: Colors.teal),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text('Error: ${snapshot.error}'),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('No doctors available'),
-                  ),
-                );
-              }
-
-              final doctors = snapshot.data!.docs;
-              // supabase
-              return Column(
-                children: doctors.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return DoctorCard(
-                    doctorId: doc.id,
-                    name: data['name'] ?? 'Doctor',
-                    specialty: data['specialization'] ?? 'General',
-                    rating: (data['rating'] ?? 0.0).toDouble(),
-                    yearsExp: data['yearsExperience'] ?? 0,
-                    location: data['clinicLocation'] ?? 'Clinic',
-                    distance: 5.0,
-                    imageUrl:
-                        data['imageUrl'], // ✅ غيّرتها من imagePath لـ imageUrl
-                    price: (data['fees'] ?? 0.0).toDouble(),
-                  );
-                }).toList(),
-              );
-            },
-          ),
-
-          const SizedBox(height: 30),
-        ],
-      ),
     );
   }
 
-  // DRAWER
-  Widget _buildDrawer() {
-    String userName = userData?['name'] ?? 'User';
-    String userEmail = userData?['email'] ?? 'user@example.com';
-    String initials = userName.isNotEmpty
-        ? userName.split(' ').map((n) => n[0]).take(2).join().toUpperCase()
-        : 'U';
+  // =========================
+  // DOCTORS SECTION
+  // =========================
+  Widget _buildDoctorsSection() {
+    if (doctors.isEmpty) {
+      return _buildEmptyState();
+    }
 
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
+    return Column(
+      children: doctors.take(5).map((doctor) {
+        return DoctorCard(
+          doctorId: doctor['_id'] ?? '',
+
+          name: doctor['name'] ?? 'Doctor',
+
+          specialty: doctor['specialization'] ?? 'General',
+
+          rating: (doctor['rating'] ?? 4.5).toDouble(),
+
+          yearsExp: doctor['yearsExperience'] ?? 1,
+
+          location: doctor['clinicLocation'] ?? 'Clinic',
+
+          distance: 5.0,
+
+          imageUrl: doctor['profileImage'],
+
+          price: (doctor['fees'] ?? 0).toDouble(),
+        );
+      }).toList(),
+    );
+  }
+
+  // =========================
+  // HEADER
+  // =========================
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 30),
+
+      decoration: const BoxDecoration(
+        gradient: AppColors.mainGradient,
+
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+
+      child: Row(
         children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2ECC71), Color(0xFF1ABC9C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
+
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Color(0xFF1ABC9C),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                  ),
+                const Text(
+                  'Welcome Back 👋',
+
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
-                const SizedBox(height: 8),
+
+                const SizedBox(height: 6),
+
                 Text(
                   userName,
-                  style: const TextStyle(color: Colors.white, fontSize: 18),
-                ),
-                Text(
-                  userEmail,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+
+                  maxLines: 1,
+
+                  overflow: TextOverflow.ellipsis,
+
+                  style: const TextStyle(
+                    color: Colors.white,
+
+                    fontWeight: FontWeight.bold,
+
+                    fontSize: 26,
+                  ),
                 ),
               ],
             ),
           ),
 
-          ListTile(
-            leading: const Icon(Icons.home_outlined, color: Color(0xFF1ABC9C)),
-            title: const Text('Home (Patient)'),
-            onTap: () => Navigator.pop(context),
-          ),
+          Hero(
+            tag: 'patient-avatar',
 
-          const Divider(),
+            child: Container(
+              width: 60,
+              height: 60,
 
-          ListTile(
-            leading: const Icon(
-              Icons.settings_outlined,
-              color: Color(0xFF1ABC9C),
+              decoration: BoxDecoration(
+                color: Colors.white,
+
+                shape: BoxShape.circle,
+
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+
+                    blurRadius: 12,
+
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+
+              child: Center(
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'P',
+
+                  style: const TextStyle(
+                    fontSize: 26,
+
+                    fontWeight: FontWeight.bold,
+
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
             ),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsPage()),
-              );
-            },
-          ),
-
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Logout'),
-            onTap: () async {
-              // 1️⃣ اقفلي الـ Drawer
-              Navigator.pop(context);
-
-              // 2️⃣ Logout من Firebase
-              await _firebaseServices.logout();
-
-              if (!mounted) return;
-
-              // 3️⃣ استني frame صغير (مهم)
-              await Future.delayed(const Duration(milliseconds: 100));
-
-              // 4️⃣ روحي للـ Welcome وامسحي كل اللي قبله
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                (route) => false,
-              );
-            },
           ),
         ],
       ),
     );
   }
 
-  // HEADER + CATEGORIES
-  Widget _buildHeaderAndCategories() {
-    String userName = userData?['name'] ?? 'User';
-    String initials = userName.isNotEmpty
-        ? userName.split(' ').map((n) => n[0]).take(2).join().toUpperCase()
-        : 'U';
+  // =========================
+  // SEARCH BAR
+  // =========================
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 40, 20, 150),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF2ECC71), Color(0xFF1ABC9C)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text.rich(
-                TextSpan(
-                  text: 'Welcome back,\n',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                  children: [
-                    TextSpan(
-                      text: userName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ],
-                ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+
+        onTap: () {
+          Navigator.push(
+            context,
+
+            MaterialPageRoute(builder: (_) => const DoctorsPage()),
+          );
+        },
+
+        child: Container(
+          height: 58,
+
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+
+          decoration: BoxDecoration(
+            color: Colors.white,
+
+            borderRadius: BorderRadius.circular(18),
+
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+
+                blurRadius: 12,
+
+                offset: const Offset(0, 4),
               ),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.white,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Color(0xFF1ABC9C),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            ],
+          ),
+
+          child: Row(
+            children: [
+              Icon(Icons.search, color: Colors.grey.shade600),
+
+              const SizedBox(width: 12),
+
+              Text(
+                'Search doctors or clinics...',
+
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
 
-        // Search + Menu
-        Positioned(
-          top: 125,
-          left: 20,
-          right: 20,
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  margin: const EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Icon(Icons.menu, color: Colors.grey[800]),
-                ),
-              ),
+  // =========================
+  // CATEGORIES
+  // =========================
+  Widget _buildCategories() {
+    return SizedBox(
+      height: 60,
 
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // Navigate to all doctors with search
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DoctorsPage()),
-                    );
-                  },
-                  child: Container(
-                    height: 50,
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search, color: Colors.grey),
-                        SizedBox(width: 10),
-                        Text(
-                          'Find your doctor or clinic...',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
 
-        // Categories
-        Positioned(
-          top: 210,
-          left: 0,
-          right: 0,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: categories.asMap().entries.map((entry) {
-                int i = entry.key;
-                Category category = entry.value;
+        physics: const BouncingScrollPhysics(),
 
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _categoryIndex = i;
-                    });
+        scrollDirection: Axis.horizontal,
 
-                    if (category.title.toLowerCase() == 'all') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AllCategoriesPage(),
-                        ),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              DoctorsPage(categoryName: category.title),
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 15),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _categoryIndex == i ? Colors.teal : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          category.icon,
-                          color: _categoryIndex == i
-                              ? Colors.white
-                              : Colors.grey[800],
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          category.title,
-                          style: TextStyle(
-                            color: _categoryIndex == i
-                                ? Colors.white
-                                : Colors.grey[800],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+        itemCount: categories.length,
+
+        itemBuilder: (context, i) {
+          final category = categories[i];
+
+          final isSelected = _categoryIndex == i;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _categoryIndex = i;
+              });
+
+              if (category.title.toLowerCase() == 'all') {
+                Navigator.push(
+                  context,
+
+                  MaterialPageRoute(builder: (_) => const AllCategoriesPage()),
+                );
+              } else {
+                Navigator.push(
+                  context,
+
+                  MaterialPageRoute(
+                    builder: (_) => DoctorsPage(categoryName: category.title),
                   ),
                 );
-              }).toList(),
+              }
+            },
+
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+
+              margin: const EdgeInsets.only(right: 12),
+
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white,
+
+                borderRadius: BorderRadius.circular(18),
+
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+
+                    blurRadius: 10,
+
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+
+              child: Row(
+                children: [
+                  Icon(
+                    category.icon,
+
+                    size: 20,
+
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  Text(
+                    category.title,
+
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.grey.shade800,
+
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
+    );
+  }
+
+  // =========================
+  // EMPTY STATE
+  // =========================
+  Widget _buildEmptyState() {
+    return const Padding(
+      padding: EdgeInsets.all(30),
+
+      child: Center(
+        child: Text('No doctors available', style: TextStyle(fontSize: 16)),
+      ),
     );
   }
 }

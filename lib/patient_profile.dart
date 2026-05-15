@@ -1,11 +1,9 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/Services/auth_service.dart';
 import 'package:shifa/setting_page.dart';
 import 'package:shifa/welcome.dart';
 import 'package:shifa/app_theme.dart';
@@ -18,11 +16,11 @@ class PatientProfilePage extends StatefulWidget {
 }
 
 class _PatientProfilePageState extends State<PatientProfilePage> {
-  final FirebaseServices _firebaseServices = FirebaseServices();
-
-  final supabase = Supabase.instance.client;
+  final AuthService _authService = AuthService();
 
   final _formKey = GlobalKey<FormState>();
+
+  final ImagePicker _picker = ImagePicker();
 
   bool isLoading = true;
 
@@ -42,8 +40,6 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
   String? profileImageUrl;
 
-  final ImagePicker _picker = ImagePicker();
-
   final Map<String, bool> medicalSelected = {
     'Hypertension': true,
     'Type 2 Diabetes': false,
@@ -62,32 +58,29 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     });
   }
 
+  // =========================
+  // LOAD USER DATA
+  // =========================
   Future<void> _loadUserData() async {
     try {
-      final userData = await _firebaseServices.getUserData();
+      final response = await _authService.getPatientProfile();
 
-      final authUser = FirebaseAuth.instance.currentUser;
+      final user = response["patient"];
 
       if (!mounted) return;
 
       setState(() {
-        nameController.text = userData?['name'] ?? '';
+        nameController.text = user["name"] ?? '';
 
-        phoneController.text = userData?['phone'] ?? '';
+        emailController.text = user["email"] ?? '';
 
-        locationController.text = userData?['location'] ?? '';
+        phoneController.text = user["phone"] ?? '';
 
-        dobController.text = userData?['dateOfBirth'] ?? '';
+        locationController.text = user["location"] ?? '';
 
-        profileImageUrl = userData?['imageUrl'];
+        dobController.text = user["dateOfBirth"] ?? '';
 
-        emailController.text = authUser?.email ?? '';
-
-        if (userData?['medicalConditions'] != null) {
-          medicalSelected
-            ..clear()
-            ..addAll(Map<String, bool>.from(userData!['medicalConditions']));
-        }
+        profileImageUrl = user["imageUrl"];
 
         isLoading = false;
       });
@@ -99,16 +92,19 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
       setState(() {
         isLoading = false;
       });
+
+      _showSnackBar("Failed to load profile", isError: true);
     }
   }
 
-  Future<void> pickProfileImage() async {
+  // =========================
+  // PICK & UPLOAD IMAGE
+  // =========================
+  Future<void> _pickAndUploadImage() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 75,
+        imageQuality: 70,
       );
 
       if (image == null) return;
@@ -117,76 +113,40 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
         isUploadingImage = true;
       });
 
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final Uint8List bytes = await image.readAsBytes();
-
-      final ext = image.name.split('.').last.toLowerCase();
-
-      final filePath = '${user.uid}/profile.$ext';
-
-      await supabase.storage
-          .from('patient-images')
-          .uploadBinary(
-            filePath,
-            bytes,
-            fileOptions: FileOptions(upsert: true, contentType: 'image/$ext'),
-          );
-
-      final publicUrl = supabase.storage
-          .from('patient-images')
-          .getPublicUrl(filePath);
-
-      final finalUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-
-      await user.updatePhotoURL(finalUrl);
-
-      await _firebaseServices.updatePatientProfile(user.uid, {
-        'imageUrl': finalUrl,
-      });
-
-      if (!mounted) return;
+      final imageUrl = await _authService.uploadPatientImage(File(image.path));
 
       setState(() {
-        profileImageUrl = finalUrl;
-
-        isUploadingImage = false;
+        profileImageUrl = imageUrl;
       });
 
-      _showSnackBar('Profile image updated successfully');
+      _showSnackBar("Image uploaded successfully");
     } catch (e) {
-      if (!mounted) return;
-
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
       setState(() {
         isUploadingImage = false;
       });
-
-      _showSnackBar(e.toString(), isError: true);
     }
   }
 
+  // =========================
+  // SAVE FORM
+  // =========================
   Future<void> saveForm() async {
     setState(() {
       isSaving = true;
     });
 
     try {
-      final userId = _firebaseServices.getCurrentUserId();
+      await _authService.updatePatientProfile(
+        name: nameController.text.trim(),
 
-      if (userId == null) {
-        throw Exception('User ID not found');
-      }
+        phone: phoneController.text.trim(),
 
-      await _firebaseServices.updatePatientProfile(userId, {
-        'name': nameController.text.trim(),
-        'phone': phoneController.text.trim(),
-        'location': locationController.text.trim(),
-        'dateOfBirth': dobController.text.trim(),
-      });
+        location: locationController.text.trim(),
+
+        dateOfBirth: dobController.text.trim(),
+      );
 
       if (!mounted) return;
 
@@ -204,25 +164,36 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     }
   }
 
+  // =========================
+  // SNACKBAR
+  // =========================
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
+
         backgroundColor: isError ? Colors.red : AppColors.primary,
+
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
         content: Text(message),
       ),
     );
   }
 
+  // =========================
+  // LOGOUT
+  // =========================
   Future<void> _logout() async {
-    await _firebaseServices.logout();
+    await _authService.logout();
 
     if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
+
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+
       (route) => false,
     );
   }
@@ -230,10 +201,15 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   @override
   void dispose() {
     nameController.dispose();
+
     emailController.dispose();
+
     phoneController.dispose();
+
     locationController.dispose();
+
     dobController.dispose();
+
     super.dispose();
   }
 
@@ -252,41 +228,27 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
-      floatingActionButton: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: FloatingActionButton.extended(
-          onPressed: isSaving ? null : saveForm,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: isSaving ? null : saveForm,
 
-          backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primary,
 
-          elevation: 10,
+        icon: isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
 
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.save, color: Colors.white),
 
-          icon: isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.save, color: Colors.white),
+        label: const Text(
+          "Save Changes",
 
-          label: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              "Save Changes",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
 
@@ -326,58 +288,79 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     );
   }
 
+  // =========================
+  // HEADER
+  // =========================
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
+
       padding: const EdgeInsets.fromLTRB(20, 40, 20, 36),
+
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xff008E97), Color(0xff12B3A8), Color(0xff31C46C)],
+
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(42),
+
           bottomRight: Radius.circular(42),
         ),
       ),
+
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
             children: [
               Container(
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.15),
+
                   shape: BoxShape.circle,
                 ),
+
                 child: IconButton(
                   onPressed: () {
                     Navigator.pop(context);
                   },
+
                   icon: const Icon(
                     Icons.arrow_back_ios_new,
                     color: Colors.white,
                   ),
                 ),
               ),
+
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
                 ),
+
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.15),
+
                   borderRadius: BorderRadius.circular(18),
                 ),
+
                 child: const Row(
                   children: [
                     Icon(Icons.edit, color: Colors.white, size: 18),
+
                     SizedBox(width: 8),
+
                     Text(
                       "Edit Profile",
+
                       style: TextStyle(
                         color: Colors.white,
+
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -391,21 +374,28 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
           Stack(
             alignment: Alignment.bottomRight,
+
             children: [
               Container(
                 width: 145,
                 height: 145,
+
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+
                   border: Border.all(color: Colors.white, width: 5),
+
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.18),
+
                       blurRadius: 24,
+
                       offset: const Offset(0, 12),
                     ),
                   ],
                 ),
+
                 child: ClipOval(
                   child: profileImageUrl != null
                       ? Image.network(profileImageUrl!, fit: BoxFit.cover)
@@ -414,23 +404,30 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               ),
 
               GestureDetector(
-                onTap: pickProfileImage,
+                onTap: isUploadingImage ? null : _pickAndUploadImage,
+
                 child: Container(
                   padding: const EdgeInsets.all(14),
+
                   decoration: BoxDecoration(
                     color: Colors.white,
+
                     shape: BoxShape.circle,
+
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.08),
+
                         blurRadius: 10,
                       ),
                     ],
                   ),
+
                   child: isUploadingImage
                       ? const SizedBox(
                           width: 20,
                           height: 20,
+
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: AppColors.primary,
@@ -450,6 +447,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
           Text(
             nameController.text.isEmpty ? "Patient" : nameController.text,
+
             style: const TextStyle(
               color: Colors.white,
               fontSize: 38,
@@ -461,31 +459,8 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
           Text(
             emailController.text,
+
             style: const TextStyle(color: Colors.white70, fontSize: 18),
-          ),
-
-          const SizedBox(height: 18),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.verified_user, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Patient since 2024',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -495,49 +470,53 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   Widget _buildProfileStatusCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
+
       padding: const EdgeInsets.all(18),
+
       decoration: BoxDecoration(
         color: Colors.white,
+
         borderRadius: BorderRadius.circular(24),
+
         border: Border.all(color: const Color(0xffDDF2EC)),
+
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 16),
         ],
       ),
-      child: Row(
+
+      child: const Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xff00A99D), Color(0xff18C08F)],
-              ),
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 30),
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: AppColors.primary,
+
+            child: Icon(Icons.check, color: Colors.white),
           ),
 
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
 
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
                 Text(
                   "Profile looks good!",
+
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
+
                 SizedBox(height: 6),
+
                 Text(
-                  "Keep your information up to date.",
+                  "Keep your information updated.",
+
                   style: TextStyle(color: Colors.grey, fontSize: 15),
                 ),
               ],
             ),
           ),
-
-          const Icon(Icons.arrow_forward_ios, size: 18),
         ],
       ),
     );
@@ -546,31 +525,19 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   Widget _buildInfoCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
+
       child: Card(
         elevation: 6,
+
         shadowColor: Colors.black.withOpacity(0.05),
+
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+
         child: Padding(
           padding: const EdgeInsets.all(20),
+
           child: Column(
             children: [
-              const Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Color(0xffE8F7F5),
-                    child: Icon(Icons.person, color: AppColors.primary),
-                  ),
-                  SizedBox(width: 14),
-                  Text(
-                    "Personal Information",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
               infoField(Icons.person, 'Name', nameController),
 
               infoField(Icons.email, 'Email', emailController, enabled: false),
@@ -590,56 +557,38 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   Widget _buildMedicalConditions() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
+
       child: Card(
-        elevation: 6,
-        shadowColor: Colors.black.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+
         child: Padding(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(20),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.monitor_heart, color: AppColors.primary),
-                  SizedBox(width: 10),
-                  Text(
-                    'Medical Conditions',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              const Text(
+                "Medical Conditions",
+
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
+
                 children: medicalSelected.entries.map((entry) {
                   return Chip(
+                    label: Text(entry.key),
+
                     backgroundColor: entry.value
                         ? AppColors.primary.withOpacity(0.12)
                         : Colors.grey.shade200,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    avatar: entry.value
-                        ? const Icon(
-                            Icons.check,
-                            size: 18,
-                            color: AppColors.primary,
-                          )
-                        : null,
-                    label: Text(entry.key),
                   );
                 }).toList(),
-              ),
-
-              const SizedBox(height: 14),
-
-              const Text(
-                'Only doctors can update medical conditions.',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ],
           ),
@@ -651,19 +600,23 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   Widget _buildSettingsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
+
       child: Card(
-        elevation: 6,
-        shadowColor: Colors.black.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+
         child: Column(
           children: [
             ListTile(
               leading: const Icon(Icons.settings, color: AppColors.primary),
+
               title: const Text("Settings"),
+
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+
               onTap: () {
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(builder: (_) => const SettingsPage()),
                 );
               },
@@ -673,7 +626,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
+
               title: const Text("Logout"),
+
               onTap: _logout,
             ),
           ],
@@ -690,25 +645,36 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
+
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xffE6EAF0)),
+
         borderRadius: BorderRadius.circular(22),
       ),
+
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+
         leading: CircleAvatar(
           radius: 28,
+
           backgroundColor: const Color(0xffE8F7F5),
+
           child: Icon(icon, color: AppColors.primary),
         ),
+
         title: Text(
           label,
+
           style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
         ),
+
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
+
           child: Text(
             controller.text.isEmpty ? "Not Added" : controller.text,
+
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
@@ -716,8 +682,10 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
             ),
           ),
         ),
+
         trailing: Icon(
           enabled ? Icons.edit_outlined : Icons.lock_outline,
+
           color: enabled ? AppColors.primary : Colors.grey,
         ),
       ),
@@ -731,6 +699,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
           colors: [Color(0xff4FC3F7), Color(0xff81C784)],
         ),
       ),
+
       child: const Icon(Icons.person, size: 60, color: Colors.white),
     );
   }

@@ -1,10 +1,9 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:shifa/Services/firebase_services.dart';
+import 'package:shifa/Services/auth_service.dart';
 import 'package:shifa/setting_page.dart';
 import 'package:shifa/welcome.dart';
 import 'package:shifa/app_theme.dart';
@@ -17,19 +16,17 @@ class DoctorProfile extends StatefulWidget {
 }
 
 class _DoctorProfileState extends State<DoctorProfile> {
-  final FirebaseServices _firebaseServices = FirebaseServices();
-
-  final supabase = Supabase.instance.client;
+  final AuthService _authService = AuthService();
 
   final _formKey = GlobalKey<FormState>();
+
+  final ImagePicker _picker = ImagePicker();
 
   bool isLoading = true;
 
   bool isSaving = false;
 
   bool isUploadingImage = false;
-
-  String? doctorId;
 
   final emailController = TextEditingController();
 
@@ -47,11 +44,9 @@ class _DoctorProfileState extends State<DoctorProfile> {
 
   final feesController = TextEditingController();
 
-  String nameDisplay = 'Doctor';
+  String doctorName = "Doctor";
 
   String? profileImageUrl;
-
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -66,73 +61,59 @@ class _DoctorProfileState extends State<DoctorProfile> {
     });
   }
 
+  // =========================
+  // LOAD PROFILE
+  // =========================
   Future<void> _loadDoctorProfile() async {
     try {
-      setState(() {
-        isLoading = true;
-      });
+      final response = await _authService.getDoctorProfile();
 
-      doctorId = _firebaseServices.getCurrentUserId();
-
-      if (doctorId == null) {
-        setState(() {
-          isLoading = false;
-        });
-
-        return;
-      }
-
-      final profile = await _firebaseServices.getDoctorProfile(doctorId!);
+      final doctor = response["doctor"];
 
       if (!mounted) return;
 
-      if (profile != null) {
-        setState(() {
-          nameDisplay = profile['name'] ?? 'Doctor';
+      setState(() {
+        doctorName = doctor["name"] ?? "Doctor";
 
-          emailController.text = profile['email'] ?? '';
+        emailController.text = doctor["email"] ?? '';
 
-          phoneController.text = profile['phone'] ?? '';
+        phoneController.text = doctor["phone"] ?? '';
 
-          locationController.text = profile['clinicLocation'] ?? '';
+        locationController.text = doctor["clinicLocation"] ?? '';
 
-          specializationController.text = profile['specialization'] ?? '';
+        specializationController.text = doctor["specialization"] ?? '';
 
-          universityController.text = profile['university'] ?? '';
+        universityController.text = doctor["university"] ?? '';
 
-          certificateController.text = profile['certificate'] ?? '';
+        certificateController.text = doctor["certificate"] ?? '';
 
-          aboutController.text = profile['about'] ?? '';
+        aboutController.text = doctor["about"] ?? '';
 
-          feesController.text = (profile['fees'] ?? 0).toString();
+        feesController.text = (doctor["fees"] ?? 0).toString();
 
-          profileImageUrl = profile['imageUrl'];
+        profileImageUrl = doctor["imageUrl"];
 
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
+        isLoading = false;
+      });
     } catch (e) {
       debugPrint(e.toString());
-
-      if (!mounted) return;
 
       setState(() {
         isLoading = false;
       });
+
+      _showSnackBar("Failed to load profile", isError: true);
     }
   }
 
-  Future<void> pickProfileImage() async {
+  // =========================
+  // UPLOAD IMAGE
+  // =========================
+  Future<void> _pickAndUploadImage() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 75,
-        maxWidth: 512,
-        maxHeight: 512,
+        imageQuality: 70,
       );
 
       if (image == null) return;
@@ -141,121 +122,111 @@ class _DoctorProfileState extends State<DoctorProfile> {
         isUploadingImage = true;
       });
 
-      final Uint8List bytes = await image.readAsBytes();
-
-      final ext = image.name.split('.').last;
-
-      final path = '$doctorId/profile.$ext';
-
-      await supabase.storage
-          .from('doctor-images')
-          .uploadBinary(
-            path,
-            bytes,
-            fileOptions: FileOptions(upsert: true, contentType: 'image/$ext'),
-          );
-
-      final publicUrl = supabase.storage
-          .from('doctor-images')
-          .getPublicUrl(path);
-
-      final imageUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-
-      await _firebaseServices.updateDoctorProfile(doctorId!, {
-        'imageUrl': imageUrl,
-      });
-
-      if (!mounted) return;
+      final imageUrl = await _authService.uploadDoctorImage(File(image.path));
 
       setState(() {
         profileImageUrl = imageUrl;
-
-        isUploadingImage = false;
       });
 
-      _showSnackBar('Profile image updated successfully');
+      _showSnackBar("Image uploaded successfully");
     } catch (e) {
-      if (!mounted) return;
-
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
       setState(() {
         isUploadingImage = false;
       });
-
-      _showSnackBar(e.toString(), isError: true);
     }
   }
 
+  // =========================
+  // SAVE PROFILE
+  // =========================
   Future<void> saveForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (doctorId == null) return;
-
     try {
       setState(() {
         isSaving = true;
       });
 
-      await _firebaseServices.updateDoctorProfile(doctorId!, {
-        'phone': phoneController.text.trim(),
-        'clinicLocation': locationController.text.trim(),
-        'specialization': specializationController.text.trim(),
-        'university': universityController.text.trim(),
-        'certificate': certificateController.text.trim(),
-        'about': aboutController.text.trim(),
-        'fees': double.tryParse(feesController.text) ?? 0,
-      });
+      await _authService.updateDoctorProfile(
+        phone: phoneController.text.trim(),
+
+        location: locationController.text.trim(),
+
+        specialization: specializationController.text.trim(),
+
+        university: universityController.text.trim(),
+
+        certificate: certificateController.text.trim(),
+
+        about: aboutController.text.trim(),
+
+        fees: feesController.text.trim(),
+      );
 
       if (!mounted) return;
 
-      _showSnackBar('Profile updated successfully');
+      _showSnackBar("Profile updated successfully");
     } catch (e) {
-      if (!mounted) return;
-
       _showSnackBar(e.toString(), isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          isSaving = false;
-        });
-      }
+      setState(() {
+        isSaving = false;
+      });
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isError ? Colors.red : AppColors.primary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Text(message),
-      ),
-    );
-  }
-
+  // =========================
+  // LOGOUT
+  // =========================
   Future<void> _logout() async {
-    await _firebaseServices.logout();
+    await _authService.logout();
 
     if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
+
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+
       (route) => false,
+    );
+  }
+
+  // =========================
+  // SNACKBAR
+  // =========================
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+
+        backgroundColor: isError ? Colors.red : AppColors.primary,
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        content: Text(message),
+      ),
     );
   }
 
   @override
   void dispose() {
     emailController.dispose();
+
     phoneController.dispose();
+
     locationController.dispose();
+
     specializationController.dispose();
+
     universityController.dispose();
+
     certificateController.dispose();
+
     aboutController.dispose();
+
     feesController.dispose();
+
     super.dispose();
   }
 
@@ -274,69 +245,54 @@ class _DoctorProfileState extends State<DoctorProfile> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
-      floatingActionButton: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: FloatingActionButton.extended(
-          onPressed: isSaving ? null : saveForm,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: isSaving ? null : saveForm,
 
-          backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primary,
 
-          elevation: 5,
+        icon: isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
 
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.save, color: Colors.white),
 
-          icon: const Icon(Icons.save, color: Colors.white),
+        label: const Text(
+          "Save Changes",
 
-          label: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              "Save Changes",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
 
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
+
           child: Form(
             key: _formKey,
+
             child: Column(
               children: [
                 _buildHeader(),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
-                _buildStatusCard(),
+                _buildProfessionalCard(),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
-                _buildProfessionalSection(),
+                _buildAboutCard(),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
-                _buildContactSection(),
+                _buildSettingsCard(),
 
-                const SizedBox(height: 18),
-
-                _buildEducationSection(),
-
-                const SizedBox(height: 18),
-
-                _buildAboutSection(),
-
-                const SizedBox(height: 18),
-
-                _buildSettingsSection(),
-
-                const SizedBox(height: 140),
+                const SizedBox(height: 120),
               ],
             ),
           ),
@@ -345,133 +301,90 @@ class _DoctorProfileState extends State<DoctorProfile> {
     );
   }
 
+  // =========================
+  // HEADER
+  // =========================
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
+
       padding: const EdgeInsets.fromLTRB(20, 40, 20, 36),
+
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xff008E97), Color(0xff12B3A8), Color(0xff31C46C)],
+
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(42),
+
           bottomRight: Radius.circular(42),
         ),
       ),
+
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.edit, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      "Edit Profile",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 28),
-
           Stack(
             alignment: Alignment.bottomRight,
+
             children: [
-              Container(
-                width: 155,
-                height: 155,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: profileImageUrl != null
-                      ? Image.network(profileImageUrl!, fit: BoxFit.cover)
-                      : _buildDefaultAvatar(),
-                ),
+              CircleAvatar(
+                radius: 70,
+
+                backgroundColor: Colors.white,
+
+                backgroundImage: profileImageUrl != null
+                    ? NetworkImage(profileImageUrl!)
+                    : null,
+
+                child: profileImageUrl == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: AppColors.primary,
+                      )
+                    : null,
               ),
 
               GestureDetector(
-                onTap: pickProfileImage,
+                onTap: isUploadingImage ? null : _pickAndUploadImage,
+
                 child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(12),
+
+                  decoration: const BoxDecoration(
                     color: Colors.white,
+
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 10,
-                      ),
-                    ],
                   ),
+
                   child: isUploadingImage
                       ? const SizedBox(
                           width: 20,
                           height: 20,
+
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: AppColors.primary,
                           ),
                         )
-                      : const Icon(
-                          Icons.camera_alt,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
+                      : const Icon(Icons.camera_alt, color: AppColors.primary),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
 
           Text(
-            nameDisplay,
+            doctorName,
+
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 38,
+              fontSize: 34,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -482,235 +395,136 @@ class _DoctorProfileState extends State<DoctorProfile> {
             specializationController.text.isEmpty
                 ? "Doctor"
                 : specializationController.text,
+
             style: const TextStyle(color: Colors.white70, fontSize: 18),
           ),
-
-          const SizedBox(height: 18),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.verified, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Verified Doctor',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xffDDF2EC)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 16),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xff00A99D), Color(0xff18C08F)],
-              ),
-            ),
-            child: const Icon(
-              Icons.medical_services,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Professional Doctor",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  "Keep your profile updated.",
-                  style: TextStyle(color: Colors.grey, fontSize: 15),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfessionalSection() {
+  Widget _buildProfessionalCard() {
     return buildCard(
-      title: 'Professional Information',
+      title: "Professional Information",
+
       icon: Icons.medical_services,
+
       children: [
         buildField(
+          controller: emailController,
+
+          label: "Email",
+
+          icon: Icons.email,
+
+          enabled: false,
+        ),
+
+        buildField(
+          controller: phoneController,
+
+          label: "Phone",
+
+          icon: Icons.phone,
+        ),
+
+        buildField(
+          controller: locationController,
+
+          label: "Clinic Location",
+
+          icon: Icons.location_on,
+        ),
+
+        buildField(
           controller: specializationController,
-          label: 'Specialization',
+
+          label: "Specialization",
+
           icon: Icons.local_hospital,
         ),
+
+        buildField(
+          controller: universityController,
+
+          label: "University",
+
+          icon: Icons.school,
+        ),
+
+        buildField(
+          controller: certificateController,
+
+          label: "Certificate",
+
+          icon: Icons.workspace_premium,
+        ),
+
         buildField(
           controller: feesController,
-          label: 'Consultation Fees',
+
+          label: "Consultation Fees",
+
           icon: Icons.attach_money,
         ),
       ],
     );
   }
 
-  Widget _buildContactSection() {
+  Widget _buildAboutCard() {
     return buildCard(
-      title: 'Contact Information',
-      icon: Icons.contact_phone,
+      title: "About Doctor",
+
+      icon: Icons.info,
+
       children: [
-        buildField(
-          controller: emailController,
-          label: 'Email',
-          icon: Icons.email,
-          enabled: false,
-        ),
-        buildField(
-          controller: phoneController,
-          label: 'Phone',
-          icon: Icons.phone,
-        ),
-        buildField(
-          controller: locationController,
-          label: 'Clinic Location',
-          icon: Icons.location_on,
-        ),
-      ],
-    );
-  }
+        TextFormField(
+          controller: aboutController,
 
-  Widget _buildEducationSection() {
-    return buildCard(
-      title: 'Education',
-      icon: Icons.school,
-      children: [
-        buildField(
-          controller: universityController,
-          label: 'University',
-          icon: Icons.school,
-        ),
-        buildField(
-          controller: certificateController,
-          label: 'Certificate',
-          icon: Icons.workspace_premium,
-        ),
-      ],
-    );
-  }
+          maxLines: 5,
 
-  Widget _buildAboutSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Card(
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.05),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Color(0xffE8F7F5),
-                    child: Icon(Icons.info, color: AppColors.primary),
-                  ),
-                  SizedBox(width: 14),
-                  Text(
-                    "About Doctor",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
+          decoration: InputDecoration(
+            hintText: "Write about yourself",
 
-              const SizedBox(height: 24),
-
-              TextFormField(
-                controller: aboutController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Write about the doctor...',
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.all(20),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ],
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
           ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildSettingsSection() {
+  Widget _buildSettingsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
+
       child: Card(
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+
         child: Column(
           children: [
             ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xffE8F7F5),
-                child: Icon(Icons.settings, color: AppColors.primary),
-              ),
-              title: const Text('Settings'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              leading: const Icon(Icons.settings, color: AppColors.primary),
+
+              title: const Text("Settings"),
+
+              trailing: const Icon(Icons.arrow_forward_ios),
+
               onTap: () {
                 Navigator.push(
                   context,
+
                   MaterialPageRoute(builder: (_) => const SettingsPage()),
                 );
               },
             ),
 
-            const Divider(height: 0),
+            const Divider(),
 
             ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.red.withOpacity(0.1),
-                child: const Icon(Icons.logout, color: Colors.red),
-              ),
-              title: const Text('Logout'),
+              leading: const Icon(Icons.logout, color: Colors.red),
+
+              title: const Text("Logout"),
+
               onTap: _logout,
             ),
           ],
@@ -726,25 +540,30 @@ class _DoctorProfileState extends State<DoctorProfile> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
+
       child: Card(
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+
         child: Padding(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(20),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               Row(
                 children: [
                   CircleAvatar(
-                    radius: 24,
                     backgroundColor: const Color(0xffE8F7F5),
+
                     child: Icon(icon, color: AppColors.primary),
                   ),
-                  const SizedBox(width: 14),
+
+                  const SizedBox(width: 12),
+
                   Text(
                     title,
+
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -753,7 +572,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               ...children,
             ],
@@ -765,54 +584,29 @@ class _DoctorProfileState extends State<DoctorProfile> {
 
   Widget buildField({
     required TextEditingController controller,
+
     required String label,
+
     required IconData icon,
+
     bool enabled = true,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xffE6EAF0)),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: CircleAvatar(
-          radius: 28,
-          backgroundColor: const Color(0xffE8F7F5),
-          child: Icon(icon, color: AppColors.primary),
-        ),
-        title: Text(
-          label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            controller.text.isEmpty ? "Not Added" : controller.text,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-        trailing: Icon(
-          enabled ? Icons.edit_outlined : Icons.lock_outline,
-          color: enabled ? AppColors.primary : Colors.grey,
-        ),
-      ),
-    );
-  }
 
-  Widget _buildDefaultAvatar() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xff4FC3F7), Color(0xff81C784)],
+      child: TextFormField(
+        controller: controller,
+
+        enabled: enabled,
+
+        decoration: InputDecoration(
+          labelText: label,
+
+          prefixIcon: Icon(icon),
+
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
         ),
       ),
-      child: const Icon(Icons.person, size: 60, color: Colors.white),
     );
   }
 }

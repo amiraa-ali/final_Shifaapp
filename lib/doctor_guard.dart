@@ -1,81 +1,104 @@
-// doctor_guard_complete.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shifa/Services/firebase_services.dart';
 
-class DoctorGuard extends StatelessWidget {
+import 'package:shifa/Services/auth_service.dart';
+import 'package:shifa/Services/appointment_service.dart';
+
+class DoctorGuard extends StatefulWidget {
   final Widget child;
 
   const DoctorGuard({super.key, required this.child});
 
   @override
+  State<DoctorGuard> createState() => _DoctorGuardState();
+}
+
+class _DoctorGuardState extends State<DoctorGuard> {
+  final AuthService _authService = AuthService();
+
+  bool isLoading = true;
+
+  bool isAuthenticated = false;
+
+  String role = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    _checkAuth();
+  }
+
+  // =========================
+  // CHECK AUTH
+  // =========================
+  Future<void> _checkAuth() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        _redirectToWelcome();
+        return;
+      }
+
+      final profile = await _authService.getDoctorProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        isAuthenticated = true;
+
+        role = profile['role'] ?? 'doctor';
+
+        isLoading = false;
+      });
+
+      // NOT DOCTOR
+      if (role != 'doctor') {
+        if (!mounted) return;
+
+        Navigator.pushReplacementNamed(context, '/patient-home');
+      }
+    } catch (e) {
+      _redirectToWelcome();
+    }
+  }
+
+  // =========================
+  // REDIRECT
+  // =========================
+  void _redirectToWelcome() {
+    if (!mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacementNamed(context, '/welcome');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: Colors.teal)),
-          );
-        }
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.teal)),
+      );
+    }
 
-        // Not logged in
-        if (!snapshot.hasData || snapshot.data == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacementNamed('/welcome');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: Colors.teal)),
-          );
-        }
+    if (isAuthenticated && role == 'doctor') {
+      return widget.child;
+    }
 
-        // Check user role
-        return FutureBuilder<String?>(
-          future: FirebaseServices().getCurrentUserRole(),
-          builder: (context, roleSnapshot) {
-            // Loading role
-            if (roleSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: Colors.teal),
-                ),
-              );
-            }
-
-            // Role check failed or user is not a doctor
-            if (!roleSnapshot.hasData || roleSnapshot.data != 'doctor') {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                // If user is a patient, redirect to patient home
-                if (roleSnapshot.data == 'patient') {
-                  Navigator.of(context).pushReplacementNamed('/patient-home');
-                } else {
-                  // Unknown role, redirect to welcome
-                  Navigator.of(context).pushReplacementNamed('/welcome');
-                }
-              });
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: Colors.teal),
-                ),
-              );
-            }
-
-            // User is a doctor, show protected content
-            return child;
-          },
-        );
-      },
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator(color: Colors.teal)),
     );
   }
 }
 
 // ========================================================
-// appointment_chat_guard_complete.dart
+// APPOINTMENT CHAT GUARD
 // ========================================================
 
-class AppointmentChatGuard extends StatelessWidget {
+class AppointmentChatGuard extends StatefulWidget {
   final String appointmentId;
+
   final Widget child;
 
   const AppointmentChatGuard({
@@ -85,50 +108,96 @@ class AppointmentChatGuard extends StatelessWidget {
   });
 
   @override
+  State<AppointmentChatGuard> createState() => _AppointmentChatGuardState();
+}
+
+class _AppointmentChatGuardState extends State<AppointmentChatGuard> {
+  final AppointmentService _appointmentService = AppointmentService();
+
+  final AuthService _authService = AuthService();
+
+  bool isLoading = true;
+
+  bool hasAccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _checkAccess();
+  }
+
+  // =========================
+  // CHECK ACCESS
+  // =========================
+  Future<void> _checkAccess() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null) {
+        _redirect();
+        return;
+      }
+
+      // هنا نفترض إن عندك API
+      // appointment by id
+
+      final appointments = await _appointmentService.getPatientAppointments();
+
+      final appointment = appointments.firstWhere(
+        (item) => item['_id'] == widget.appointmentId,
+
+        orElse: () => null,
+      );
+
+      if (appointment == null) {
+        _redirect();
+        return;
+      }
+
+      final status = appointment['status'];
+
+      final canChat = status == 'upcoming' || status == 'completed';
+
+      if (!mounted) return;
+
+      setState(() {
+        hasAccess = canChat;
+
+        isLoading = false;
+      });
+
+      if (!canChat) {
+        _redirect();
+      }
+    } catch (e) {
+      _redirect();
+    }
+  }
+
+  // =========================
+  // REDIRECT
+  // =========================
+  void _redirect() {
+    if (!mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacementNamed(context, '/welcome');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final firebase = FirebaseServices();
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.teal)),
+      );
+    }
 
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: firebase.getAppointmentById(appointmentId),
-      builder: (context, snapshot) {
-        // Loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: Colors.teal)),
-          );
-        }
+    if (hasAccess) {
+      return widget.child;
+    }
 
-        // No data or error
-        if (!snapshot.hasData || snapshot.data == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacementNamed('/welcome');
-          });
-          return const Scaffold(
-            body: Center(child: Text('Appointment not found')),
-          );
-        }
-
-        final data = snapshot.data!;
-        final uid = firebase.currentUserId;
-
-        // Check if user is a participant
-        final isParticipant =
-            data['patientId'] == uid || data['doctorId'] == uid;
-
-        // Check if appointment status allows chat
-        // Allow chat for upcoming and completed appointments
-        final canChat =
-            data['status'] == 'upcoming' || data['status'] == 'completed';
-
-        if (!isParticipant || !canChat) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacementNamed('/welcome');
-          });
-          return const Scaffold(body: Center(child: Text('Access denied')));
-        }
-
-        return child;
-      },
-    );
+    return const Scaffold(body: Center(child: Text('Access denied')));
   }
 }

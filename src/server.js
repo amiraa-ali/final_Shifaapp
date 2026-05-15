@@ -1,147 +1,363 @@
 const express = require('express');
+
 const cors = require('cors');
+
 const helmet = require('helmet');
+
 const morgan = require('morgan');
+
 const compression = require('compression');
+
 const rateLimit = require('express-rate-limit');
+
 const path = require('path');
-const swaggerUi = require('swagger-ui-express');
+
+const swaggerUi =
+  require('swagger-ui-express');
+
 require('dotenv').config();
 
-const connectDB = require('./config/db');
-const swaggerSpec = require('./config/swagger');
-const errorHandler = require('./middleware/errorHandler');
-const notFound = require('./middleware/notFound');
+// =========================
+// CONFIG
+// =========================
+const connectDB =
+  require('./config/db');
 
-// Route imports
-const authRoutes = require('./routes/authRoutes');
-const doctorRoutes = require('./routes/doctorRoutes');
-const patientRoutes = require('./routes/patientRoutes');
-const appointmentRoutes = require('./routes/appointmentRoutes');
+const swaggerSpec =
+  require('./config/swagger');
 
-// Connect to MongoDB
+// =========================
+// MIDDLEWARE
+// =========================
+const errorHandler =
+  require('./middleware/errorHandler');
+
+const notFound =
+  require('./middleware/notFound');
+
+// =========================
+// ROUTES
+// =========================
+const authRoutes =
+  require('./routes/authRoutes');
+
+const doctorRoutes =
+  require('./routes/doctorRoutes');
+
+const patientRoutes =
+  require('./routes/patientRoutes');
+
+const appointmentRoutes =
+  require('./routes/appointmentRoutes');
+
+// ✅ NEW CHAT ROUTES
+const chatRoutes =
+  require('./routes/chatRoutes');
+
+// =========================
+// CONNECT DATABASE
+// =========================
 connectDB();
 
 const app = express();
 
-// ─── Security Middleware ───────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow image serving
-}));
+// ======================================================
+// SECURITY
+// ======================================================
+app.use(
+  helmet({
+    crossOriginResourcePolicy:
+      {
+        policy:
+          'cross-origin',
+      },
+  })
+);
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
+// ======================================================
+// CORS
+// ======================================================
+app.use(
+  cors({
+    origin:
+      process.env
+        .ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(
+            ','
+          )
+        : '*',
 
-// ─── Rate Limiting ─────────────────────────────────────────────────────────────
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+    ],
+
+    credentials: true,
+  })
+);
+
+// ======================================================
+// RATE LIMITER
+// ======================================================
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs:
+    15 * 60 * 1000,
+
   max: 100,
+
   standardHeaders: true,
+
   legacyHeaders: false,
+
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again after 15 minutes.',
+
+    message:
+      'Too many requests from this IP.',
   },
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: {
-    success: false,
-    message: 'Too many authentication attempts. Please try again after 15 minutes.',
-  },
-});
+const authLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+
+    max: 20,
+
+    message: {
+      success: false,
+
+      message:
+        'Too many auth attempts.',
+    },
+  });
 
 app.use('/api/', limiter);
-app.use('/api/auth/', authLimiter);
 
-// ─── Body Parsing ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(
+  '/api/auth/',
+  authLimiter
+);
 
-// ─── Compression ──────────────────────────────────────────────────────────────
+// ======================================================
+// BODY PARSER
+// ======================================================
+app.use(
+  express.json({
+    limit: '10mb',
+  })
+);
+
+app.use(
+  express.urlencoded({
+    extended: true,
+
+    limit: '10mb',
+  })
+);
+
+// ======================================================
+// COMPRESSION
+// ======================================================
 app.use(compression());
 
-// ─── Logging ──────────────────────────────────────────────────────────────────
-if (process.env.NODE_ENV === 'development') {
+// ======================================================
+// LOGGER
+// ======================================================
+if (
+  process.env.NODE_ENV ===
+  'development'
+) {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// ─── Static Files (Uploaded Images) ───────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
-
-// ─── Swagger API Docs ─────────────────────────────────────────────────────────
+// ======================================================
+// STATIC FILES
+// ======================================================
 app.use(
-  '/api/docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Healthcare API Docs',
-  })
+  '/uploads',
+
+  express.static(
+    path.join(
+      __dirname,
+      '..',
+      'uploads'
+    )
+  )
 );
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Healthcare API is running',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-  });
-});
+// ======================================================
+// SWAGGER
+// ======================================================
+app.use(
+  '/api/docs',
 
-// ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api/doctors', doctorRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/appointments', appointmentRoutes);
+  swaggerUi.serve,
 
-// ─── 404 Handler ──────────────────────────────────────────────────────────────
+  swaggerUi.setup(
+    swaggerSpec,
+
+    {
+      explorer: true,
+
+      customCss:
+        '.swagger-ui .topbar { display: none }',
+
+      customSiteTitle:
+        'Healthcare API Docs',
+    }
+  )
+);
+
+// ======================================================
+// HEALTH CHECK
+// ======================================================
+app.get(
+  '/health',
+
+  (req, res) => {
+    res.status(200).json({
+      success: true,
+
+      message:
+        'Healthcare API is running',
+
+      environment:
+        process.env.NODE_ENV ||
+        'development',
+
+      timestamp:
+        new Date().toISOString(),
+
+      version: '1.0.0',
+    });
+  }
+);
+
+// ======================================================
+// API ROUTES
+// ======================================================
+app.use(
+  '/api/auth',
+  authRoutes
+);
+
+app.use(
+  '/api/doctors',
+  doctorRoutes
+);
+
+app.use(
+  '/api/patients',
+  patientRoutes
+);
+
+app.use(
+  '/api/appointments',
+  appointmentRoutes
+);
+
+// ✅ CHAT ROUTES
+app.use(
+  '/api/chat',
+  chatRoutes
+);
+
+// ======================================================
+// 404
+// ======================================================
 app.use(notFound);
 
-// ─── Global Error Handler ─────────────────────────────────────────────────────
+// ======================================================
+// ERROR HANDLER
+// ======================================================
 app.use(errorHandler);
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`\n🚀 Healthcare API Server running in ${process.env.NODE_ENV || 'development'} mode`);
-  console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
-  console.log(`❤️  Health: http://localhost:${PORT}/health\n`);
-});
+// ======================================================
+// START SERVER
+// ======================================================
+const PORT =
+  process.env.PORT || 5000;
 
-// ─── Handle Unhandled Promise Rejections ──────────────────────────────────────
-process.on('unhandledRejection', (err) => {
-  console.error(`❌ Unhandled Rejection: ${err.message}`);
-  server.close(() => process.exit(1));
-});
+const server = app.listen(
+  PORT,
+  () => {
+    console.log(
+      `\n🚀 Healthcare API running on port ${PORT}`
+    );
 
-// ─── Handle Uncaught Exceptions ───────────────────────────────────────────────
-process.on('uncaughtException', (err) => {
-  console.error(`❌ Uncaught Exception: ${err.message}`);
-  process.exit(1);
-});
+    console.log(
+      `📚 Docs: http://localhost:${PORT}/api/docs`
+    );
 
-// ─── Graceful Shutdown ────────────────────────────────────────────────────────
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated.');
-    process.exit(0);
-  });
-});
+    console.log(
+      `❤️ Health: http://localhost:${PORT}/health\n`
+    );
+  }
+);
+
+// ======================================================
+// UNHANDLED REJECTION
+// ======================================================
+process.on(
+  'unhandledRejection',
+
+  (err) => {
+    console.error(
+      `❌ ${err.message}`
+    );
+
+    server.close(() =>
+      process.exit(1)
+    );
+  }
+);
+
+// ======================================================
+// UNCAUGHT EXCEPTION
+// ======================================================
+process.on(
+  'uncaughtException',
+
+  (err) => {
+    console.error(
+      `❌ ${err.message}`
+    );
+
+    process.exit(1);
+  }
+);
+
+// ======================================================
+// GRACEFUL SHUTDOWN
+// ======================================================
+process.on(
+  'SIGTERM',
+
+  () => {
+    console.log(
+      'SIGTERM received.'
+    );
+
+    server.close(() => {
+      console.log(
+        'Server terminated.'
+      );
+
+      process.exit(0);
+    });
+  }
+);
 
 module.exports = app;

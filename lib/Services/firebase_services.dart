@@ -315,10 +315,14 @@ class FirebaseServices {
     Map<String, dynamic> data,
   ) async {
     try {
-      await _firestore.collection('doctors').doc(doctorId).update(data);
+      data['updatedAt'] = FieldValue.serverTimestamp();
+
+      await doctorsCollection.doc(doctorId).update(data);
+
       return true;
     } catch (e) {
       debugPrint('Update doctor profile error: $e');
+
       return false;
     }
   }
@@ -438,18 +442,19 @@ class FirebaseServices {
   }
 
   Stream<QuerySnapshot> getTodayAppointments(String doctorId) {
-    DateTime now = DateTime.now();
-    DateTime start = DateTime(now.year, now.month, now.day);
-    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final now = DateTime.now();
 
-    return _firestore
-        .collection('appointments')
+    final start = DateTime(now.year, now.month, now.day);
+
+    final end = start.add(const Duration(days: 1));
+
+    return appointmentsCollection
         .where('doctorId', isEqualTo: doctorId)
         .where(
           'appointmentDate',
           isGreaterThanOrEqualTo: Timestamp.fromDate(start),
         )
-        .where('appointmentDate', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .where('appointmentDate', isLessThan: Timestamp.fromDate(end))
         .orderBy('appointmentDate')
         .snapshots();
   }
@@ -498,8 +503,7 @@ class FirebaseServices {
   }
 
   Stream<QuerySnapshot> getAppointmentHistory(String patientId) {
-    return _firestore
-        .collection('appointments')
+    return appointmentsCollection
         .where('patientId', isEqualTo: patientId)
         .where('status', whereIn: ['completed', 'cancelled'])
         .orderBy('appointmentDate', descending: true)
@@ -739,22 +743,19 @@ class FirebaseServices {
 
   Future<int> getTotalPatientsCount(String doctorId) async {
     try {
-      QuerySnapshot appointments = await _firestore
-          .collection('appointments')
+      final appointments = await appointmentsCollection
           .where('doctorId', isEqualTo: doctorId)
           .get();
 
-      Set<String> uniquePatients = {};
-      for (var doc in appointments.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('patientId')) {
-          uniquePatients.add(data['patientId']);
-        }
-      }
+      final uniquePatients = appointments.docs
+          .map((doc) => doc['patientId'] as String?)
+          .whereType<String>()
+          .toSet();
 
       return uniquePatients.length;
     } catch (e) {
       debugPrint('Get total patients count error: $e');
+
       return 0;
     }
   }
@@ -869,6 +870,28 @@ class FirebaseServices {
       return true;
     } catch (e) {
       debugPrint('Book time slot error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> appointmentExists(String appointmentId) async {
+    try {
+      final doc = await appointmentsCollection.doc(appointmentId).get();
+
+      return doc.exists;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAppointment(String appointmentId) async {
+    try {
+      await appointmentsCollection.doc(appointmentId).delete();
+
+      return true;
+    } catch (e) {
+      debugPrint('Delete appointment error: $e');
+
       return false;
     }
   }

@@ -1,149 +1,260 @@
 import 'package:flutter/material.dart';
+
 import 'package:shifa/doctor_home_screen.dart';
 import 'doctor_chat_detail_screen.dart';
 
-class DoctorChatScreen extends StatelessWidget {
+import 'package:shifa/Services/appointment_service.dart';
+
+class DoctorChatScreen extends StatefulWidget {
   const DoctorChatScreen({super.key});
 
-  // ==================== DUMMY CHATS DATA ====================
-  static final List<Map<String, dynamic>> dummyChats = [
-    {
-      'chatId': 'chat_001',
-      'patientName': 'Ahmed Hassan',
-      'patientId': 'patient_001',
-      'lastMessage': 'Thank you doctor! I feel much better now.',
-      'lastMessageTime': DateTime.now().subtract(const Duration(minutes: 5)),
-      'unreadCount': 0,
-      'patientAge': 28,
-      'patientGender': 'Male',
-    },
-    {
-      'chatId': 'chat_002',
-      'patientName': 'Sarah Mohamed',
-      'patientId': 'patient_002',
-      'lastMessage': 'When should I take the medication?',
-      'lastMessageTime': DateTime.now().subtract(const Duration(hours: 2)),
-      'unreadCount': 2,
-      'patientAge': 35,
-      'patientGender': 'Female',
-    },
-    {
-      'chatId': 'chat_003',
-      'patientName': 'Omar Ali',
-      'patientId': 'patient_003',
-      'lastMessage': 'Can I schedule a follow-up appointment?',
-      'lastMessageTime': DateTime.now().subtract(const Duration(hours: 5)),
-      'unreadCount': 1,
-      'patientAge': 42,
-      'patientGender': 'Male',
-    },
-    {
-      'chatId': 'chat_004',
-      'patientName': 'Fatma Ibrahim',
-      'patientId': 'patient_004',
-      'lastMessage': 'The test results have arrived.',
-      'lastMessageTime': DateTime.now().subtract(const Duration(days: 1)),
-      'unreadCount': 0,
-      'patientAge': 31,
-      'patientGender': 'Female',
-    },
-    {
-      'chatId': 'chat_005',
-      'patientName': 'Mahmoud Khaled',
-      'patientId': 'patient_005',
-      'lastMessage': 'I have some questions about the treatment.',
-      'lastMessageTime': DateTime.now().subtract(const Duration(days: 2)),
-      'unreadCount': 3,
-      'patientAge': 45,
-      'patientGender': 'Male',
-    },
-    {
-      'chatId': 'chat_006',
-      'patientName': 'Mariam Ahmed',
-      'patientId': 'patient_006',
-      'lastMessage': 'Good morning doctor!',
-      'lastMessageTime': DateTime.now().subtract(const Duration(days: 3)),
-      'unreadCount': 0,
-      'patientAge': 26,
-      'patientGender': 'Female',
-    },
-  ];
+  @override
+  State<DoctorChatScreen> createState() => _DoctorChatScreenState();
+}
+
+class _DoctorChatScreenState extends State<DoctorChatScreen> {
+  final AppointmentService _appointmentService = AppointmentService();
+
+  List<dynamic> chats = [];
+
+  bool isLoading = true;
+
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadChats();
+  }
+
+  // =========================
+  // LOAD CHATS
+  // =========================
+  Future<void> _loadChats() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final appointments = await _appointmentService.getDoctorAppointments();
+
+      final allowedChats = appointments.where((item) {
+        final status = item['status'] ?? '';
+
+        return status == 'confirmed' ||
+            status == 'completed' ||
+            status == 'accepted' ||
+            status == 'upcoming';
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        chats = allowedChats;
+
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
+
       appBar: AppBar(
         backgroundColor: Colors.teal,
+
         elevation: 0,
+
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
+
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,
+
               MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
+
               (route) => false,
             );
           },
         ),
+
         title: const Text(
           "Patient Chats",
+
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // Search functionality
-            },
+            icon: const Icon(Icons.refresh, color: Colors.white),
+
+            onPressed: _loadChats,
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: dummyChats.length,
-        itemBuilder: (context, index) {
-          final chat = dummyChats[index];
-          return ChatTile(
-            chatId: chat['chatId'],
-            patientName: chat['patientName'],
-            patientId: chat['patientId'],
-            lastMessage: chat['lastMessage'],
-            lastMessageTime: chat['lastMessageTime'],
-            unreadCount: chat['unreadCount'],
-            patientAge: chat['patientAge'],
-            patientGender: chat['patientGender'],
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DoctorChatDetailScreen(
-                    chatId: chat['chatId'],
-                    patientName: chat['patientName'],
-                    patientId: chat['patientId'],
-                    patientAge: chat['patientAge'],
-                    patientGender: chat['patientGender'],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+          : error.isNotEmpty
+          ? _buildError()
+          : chats.isEmpty
+          ? _buildEmpty()
+          : RefreshIndicator(
+              onRefresh: _loadChats,
+
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+
+                itemCount: chats.length,
+
+                itemBuilder: (context, index) {
+                  final chat = chats[index];
+
+                  return ChatTile(
+                    chatId: chat['_id'] ?? '',
+
+                    patientName: chat['patientName'] ?? 'Patient',
+
+                    patientId: chat['patientId'] ?? '',
+
+                    lastMessage: chat['lastMessage'] ?? 'Start conversation',
+
+                    lastMessageTime:
+                        DateTime.tryParse(chat['updatedAt'] ?? '') ??
+                        DateTime.now(),
+
+                    unreadCount: chat['unreadCount'] ?? 0,
+
+                    patientAge: chat['patientAge'] ?? 0,
+
+                    patientGender: chat['patientGender'] ?? 'Unknown',
+
+                    onTap: () {
+                      Navigator.push(
+                        context,
+
+                        MaterialPageRoute(
+                          builder: (_) => DoctorChatDetailScreen(
+                            chatId: chat['_id'] ?? '',
+
+                            patientName: chat['patientName'] ?? 'Patient',
+
+                            patientId: chat['patientId'] ?? '',
+
+                            patientAge: chat['patientAge'] ?? 0,
+
+                            patientGender: chat['patientGender'] ?? 'Unknown',
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+    );
+  }
+
+  // =========================
+  // EMPTY
+  // =========================
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+
+        children: [
+          Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[400]),
+
+          const SizedBox(height: 16),
+
+          Text(
+            'No patient chats',
+
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            'Chats will appear here after appointments',
+
+            style: TextStyle(color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================
+  // ERROR
+  // =========================
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+
+          children: [
+            const Icon(Icons.error_outline, size: 70, color: Colors.red),
+
+            const SizedBox(height: 16),
+
+            Text(
+              error,
+
+              textAlign: TextAlign.center,
+
+              style: const TextStyle(color: Colors.red),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: _loadChats,
+
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ==================== CHAT TILE WIDGET ====================
+// ==================== CHAT TILE ====================
+
 class ChatTile extends StatelessWidget {
   final String chatId;
+
   final String patientName;
+
   final String patientId;
+
   final String lastMessage;
+
   final DateTime lastMessageTime;
+
   final int unreadCount;
+
   final int patientAge;
+
   final String patientGender;
+
   final VoidCallback onTap;
 
   const ChatTile({
@@ -161,6 +272,7 @@ class ChatTile extends StatelessWidget {
 
   String _getTimeAgo() {
     final now = DateTime.now();
+
     final difference = now.difference(lastMessageTime);
 
     if (difference.inMinutes < 60) {
@@ -180,101 +292,153 @@ class ChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+
       elevation: 2,
+
       shadowColor: Colors.black12,
+
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
       child: InkWell(
         onTap: onTap,
+
         borderRadius: BorderRadius.circular(16),
+
         child: Padding(
           padding: const EdgeInsets.all(12),
+
           child: Row(
             children: [
-              // Avatar
+              // AVATAR
               Container(
                 width: 56,
                 height: 56,
+
                 decoration: BoxDecoration(
                   color: Colors.teal.shade50,
+
                   shape: BoxShape.circle,
                 ),
+
                 child: Center(
                   child: Text(
                     patientName[0].toUpperCase(),
+
                     style: TextStyle(
                       fontSize: 24,
+
                       fontWeight: FontWeight.bold,
+
                       color: Colors.teal.shade700,
                     ),
                   ),
                 ),
               ),
+
               const SizedBox(width: 12),
 
-              // Content
+              // CONTENT
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                       children: [
                         Expanded(
                           child: Text(
                             patientName,
+
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
+
                               fontSize: 16,
+
                               color: Colors.black87,
                             ),
+
                             maxLines: 1,
+
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+
                         Text(
                           _getTimeAgo(),
+
                           style: TextStyle(
                             fontSize: 12,
+
                             color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 4),
+
+                    Text(
+                      '$patientAge years • $patientGender',
+
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
                     Row(
                       children: [
                         Expanded(
                           child: Text(
                             lastMessage,
+
                             style: TextStyle(
                               fontSize: 14,
+
                               color: unreadCount > 0
                                   ? Colors.black87
                                   : Colors.grey.shade600,
+
                               fontWeight: unreadCount > 0
                                   ? FontWeight.w600
                                   : FontWeight.normal,
                             ),
+
                             maxLines: 1,
+
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+
                         if (unreadCount > 0) ...[
                           const SizedBox(width: 8),
+
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
+
                               vertical: 4,
                             ),
+
                             decoration: BoxDecoration(
                               color: Colors.teal,
+
                               borderRadius: BorderRadius.circular(12),
                             ),
+
                             child: Text(
                               '$unreadCount',
+
                               style: const TextStyle(
                                 color: Colors.white,
+
                                 fontSize: 12,
+
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

@@ -1,225 +1,297 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'app_theme.dart';
+
 class AppointmentCard extends StatelessWidget {
   final String appointmentId;
+
   final String doctorName;
+
   final String doctorSpecialty;
+
   final DateTime appointmentDate;
+
   final String appointmentTime;
+
   final String status;
+
   final double fees;
+
   final String clinicLocation;
+
   final String paymentMethod;
+
   final VoidCallback onTap;
+
+  final VoidCallback? onCancel;
 
   const AppointmentCard({
     super.key,
+
     required this.appointmentId,
+
     required this.doctorName,
+
     required this.doctorSpecialty,
+
     required this.appointmentDate,
+
     required this.appointmentTime,
+
     required this.status,
+
     required this.fees,
+
     required this.clinicLocation,
+
     required this.paymentMethod,
+
     required this.onTap,
+
+    this.onCancel,
   });
 
-  // ==================== STATUS COLOR ====================
-  Color _getStatusColor() {
+  // =========================
+  // STATUS COLOR
+  // =========================
+  Color get _statusColor {
     switch (status.toLowerCase()) {
-      case 'upcoming':
-        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+
+      case 'confirmed':
+        return AppColors.upcoming;
+
       case 'completed':
-        return Colors.blue;
+        return AppColors.completed;
+
       case 'cancelled':
-        return Colors.red;
+        return AppColors.cancelled;
+
       default:
         return Colors.grey;
     }
   }
 
-  // ==================== STATUS ICON ====================
-  IconData _getStatusIcon() {
+  // =========================
+  // STATUS ICON
+  // =========================
+  IconData get _statusIcon {
     switch (status.toLowerCase()) {
-      case 'upcoming':
-        return Icons.upcoming;
+      case 'pending':
+        return Icons.pending_actions_rounded;
+
+      case 'confirmed':
+        return Icons.event_available_rounded;
+
       case 'completed':
-        return Icons.check_circle;
+        return Icons.check_circle_rounded;
+
       case 'cancelled':
-        return Icons.cancel;
+        return Icons.cancel_rounded;
+
       default:
-        return Icons.info;
+        return Icons.info_rounded;
     }
   }
 
-  // ==================== FORMAT DATE ====================
+  // =========================
+  // FORMAT DATE
+  // =========================
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
-    final appointmentDay = DateTime(date.year, date.month, date.day);
 
-    if (appointmentDay == today) {
-      return 'Today, ${DateFormat('MMM d').format(date)}';
-    } else if (appointmentDay == tomorrow) {
-      return 'Tomorrow, ${DateFormat('MMM d').format(date)}';
-    } else {
-      return DateFormat('EEE, MMM d, yyyy').format(date);
+    final today = DateTime(now.year, now.month, now.day);
+
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+    final d = DateTime(date.year, date.month, date.day);
+
+    if (d == today) {
+      return 'Today, ${DateFormat('dd/MM/yyyy').format(date)}';
+    }
+
+    if (d == tomorrow) {
+      return 'Tomorrow, ${DateFormat('dd/MM/yyyy').format(date)}';
+    }
+
+    return DateFormat('EEE, dd/MM/yyyy').format(date);
+  }
+
+  // =========================
+  // FORMAT TIME
+  // =========================
+  String _formatTime(String time) {
+    try {
+      DateTime parsed;
+
+      try {
+        parsed = DateFormat('HH:mm').parse(time);
+      } catch (_) {
+        parsed = DateFormat('h:mm a').parse(time);
+      }
+
+      return DateFormat('h:mm a').format(parsed);
+    } catch (_) {
+      return time;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
+
       elevation: 2,
+
       shadowColor: Colors.black12,
+
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
       child: InkWell(
         onTap: onTap,
+
         borderRadius: BorderRadius.circular(16),
+
         child: Padding(
           padding: const EdgeInsets.all(16),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
-              // ================= HEADER (Doctor Info + Status) =================
+              // =========================
+              // HEADER
+              // =========================
               Row(
                 children: [
-                  // Doctor Avatar
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 52,
+
+                    height: 52,
+
                     decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
+                      color: AppColors.primary.withOpacity(0.1),
+
                       shape: BoxShape.circle,
                     ),
+
                     child: Center(
                       child: Text(
                         doctorName.isNotEmpty
                             ? doctorName[0].toUpperCase()
                             : 'D',
+
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 22,
+
                           fontWeight: FontWeight.bold,
-                          color: Colors.teal.shade700,
+
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 12),
 
-                  // Doctor Name & Specialty
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+
                       children: [
                         Text(
                           doctorName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+
+                          style: AppText.h3,
+
                           maxLines: 1,
+
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+
+                        const SizedBox(height: 2),
+
                         Text(
                           doctorSpecialty,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
+
+                          style: AppText.caption,
+
                           maxLines: 1,
+
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
 
-                  // Status Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor().withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _getStatusColor().withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getStatusIcon(),
-                          size: 16,
-                          color: _getStatusColor(),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          status.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getStatusColor(),
-                          ),
-                        ),
-                      ],
-                    ),
+                  _StatusBadge(
+                    status: status,
+
+                    color: _statusColor,
+
+                    icon: _statusIcon,
                   ),
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // ================= DIVIDER =================
-              Divider(color: Colors.grey.shade200, height: 1),
+              Divider(color: AppColors.divider, height: 1),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // ================= APPOINTMENT INFO =================
+              // =========================
+              // DATE & TIME
+              // =========================
               Row(
                 children: [
                   Expanded(
-                    child: _InfoRow(
-                      icon: Icons.calendar_today,
+                    child: _InfoChip(
+                      icon: Icons.calendar_today_rounded,
+
                       label: _formatDate(appointmentDate),
-                      color: Colors.teal,
+
+                      color: AppColors.primary,
                     ),
                   ),
+
                   Expanded(
-                    child: _InfoRow(
-                      icon: Icons.access_time,
-                      label: appointmentTime,
+                    child: _InfoChip(
+                      icon: Icons.access_time_rounded,
+
+                      label: _formatTime(appointmentTime),
+
                       color: Colors.orange,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
+              // =========================
+              // LOCATION & FEES
+              // =========================
               Row(
                 children: [
                   Expanded(
-                    child: _InfoRow(
-                      icon: Icons.location_on,
+                    child: _InfoChip(
+                      icon: Icons.location_on_rounded,
+
                       label: clinicLocation,
+
                       color: Colors.purple,
                     ),
                   ),
+
                   Expanded(
-                    child: _InfoRow(
-                      icon: Icons.payments,
-                      label: '\$${fees.toStringAsFixed(0)}',
+                    child: _InfoChip(
+                      icon: Icons.payments_rounded,
+
+                      label: '${fees.toStringAsFixed(0)} EGP',
+
                       color: Colors.green,
                     ),
                   ),
@@ -228,22 +300,52 @@ class AppointmentCard extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // ================= VIEW DETAILS BUTTON =================
+              // =========================
+              // BUTTONS
+              // =========================
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
+
                 children: [
-                  TextButton.icon(
-                    onPressed: onTap,
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: const Text(
-                      'View Details',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                  if (onCancel != null &&
+                      status.toLowerCase() != 'cancelled' &&
+                      status.toLowerCase() != 'completed')
+                    OutlinedButton.icon(
+                      onPressed: onCancel,
+
+                      icon: const Icon(Icons.close_rounded, size: 16),
+
+                      label: const Text("Cancel"),
+
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+
+                        side: const BorderSide(color: Colors.red),
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.teal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+
+                  const SizedBox(width: 10),
+
+                  ElevatedButton.icon(
+                    onPressed: onTap,
+
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+
+                    label: const Text('Details'),
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+
+                      foregroundColor: Colors.white,
+
+                      elevation: 0,
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
@@ -257,15 +359,77 @@ class AppointmentCard extends StatelessWidget {
   }
 }
 
-// ==================== INFO ROW WIDGET ====================
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
+// ======================================
+// STATUS BADGE
+// ======================================
+class _StatusBadge extends StatelessWidget {
+  final String status;
+
   final Color color;
 
-  const _InfoRow({
+  final IconData icon;
+
+  const _StatusBadge({
+    required this.status,
+
+    required this.color,
+
     required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+
+        borderRadius: BorderRadius.circular(20),
+
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(icon, size: 14, color: color),
+
+          const SizedBox(width: 4),
+
+          Text(
+            status.toUpperCase(),
+
+            style: TextStyle(
+              fontSize: 11,
+
+              fontWeight: FontWeight.w600,
+
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ======================================
+// INFO CHIP
+// ======================================
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+
+  final String label;
+
+  final Color color;
+
+  const _InfoChip({
+    required this.icon,
+
     required this.label,
+
     required this.color,
   });
 
@@ -274,23 +438,27 @@ class _InfoRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(5),
+
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+
+            borderRadius: BorderRadius.circular(7),
           ),
-          child: Icon(icon, size: 16, color: color),
+
+          child: Icon(icon, size: 14, color: color),
         ),
-        const SizedBox(width: 8),
+
+        const SizedBox(width: 6),
+
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
+
+            style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+
             maxLines: 1,
+
             overflow: TextOverflow.ellipsis,
           ),
         ),

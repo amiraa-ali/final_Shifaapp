@@ -1,334 +1,546 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+
+import 'package:shifa/app_theme.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
   final String appointmentId;
+
   final Map<String, dynamic> appointmentData;
 
   const AppointmentDetailsScreen({
     super.key,
+
     required this.appointmentId,
+
     required this.appointmentData,
   });
 
-  // ==================== STATUS COLOR ====================
-  Color _getStatusColor(String status) {
+  // =========================
+  // STATUS COLOR
+  // =========================
+  Color _statusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'upcoming':
-        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+
+      case 'confirmed':
+        return AppColors.upcoming;
+
       case 'completed':
-        return Colors.blue;
+        return AppColors.completed;
+
       case 'cancelled':
-        return Colors.red;
+        return AppColors.cancelled;
+
       default:
         return Colors.grey;
     }
   }
 
-  // ==================== FORMAT DATE ====================
-  String _formatDate(DateTime date) {
-    return DateFormat('EEEE, MMMM d, yyyy').format(date);
+  // =========================
+  // STATUS ICON
+  // =========================
+  IconData _statusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Icons.pending_actions_rounded;
+
+      case 'confirmed':
+        return Icons.event_available_rounded;
+
+      case 'completed':
+        return Icons.check_circle_rounded;
+
+      case 'cancelled':
+        return Icons.cancel_rounded;
+
+      default:
+        return Icons.info_outline_rounded;
+    }
   }
 
-  // ==================== FORMAT TIME ====================
+  // =========================
+  // FORMAT DATE
+  // =========================
+  String _formatDate(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  // =========================
+  // FORMAT TIME
+  // =========================
   String _formatTime(String time) {
     try {
-      final parsedTime = DateFormat('HH:mm').parse(time);
-      return DateFormat('h:mm a').format(parsedTime);
-    } catch (e) {
+      DateTime parsed;
+
+      try {
+        parsed = DateFormat('HH:mm').parse(time);
+      } catch (_) {
+        parsed = DateFormat('h:mm a').parse(time);
+      }
+
+      return DateFormat('hh:mm a').format(parsed);
+    } catch (_) {
       return time;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = appointmentData['doctorName'] ?? 'Doctor';
-    final doctorSpecialty = appointmentData['doctorSpecialty'] ?? 'Specialist';
-    final appointmentDate = (appointmentData['appointmentDate'] as Timestamp)
-        .toDate();
+    // =========================
+    // DOCTOR
+    // =========================
+    final doctor = appointmentData['doctor'] ?? {};
+
+    final doctorName = doctor['name'] ?? 'Doctor';
+
+    final doctorSpecialty = doctor['specialization'] ?? 'Specialist';
+
+    final fees = (doctor['fees'] ?? 0).toDouble();
+
+    final clinicLocation = doctor['clinicLocation'] ?? 'Clinic';
+
+    // =========================
+    // APPOINTMENT
+    // =========================
+    final appointmentDate = DateTime.parse(appointmentData['appointmentDate']);
+
     final appointmentTime = appointmentData['appointmentTime'] ?? '00:00';
-    final status = appointmentData['status'] ?? 'upcoming';
-    final fees = (appointmentData['fees'] as num?)?.toDouble() ?? 0.0;
-    final clinicLocation = appointmentData['clinicLocation'] ?? 'Clinic';
+
+    final status = appointmentData['status'] ?? 'pending';
+
     final paymentMethod = appointmentData['paymentMethod'] ?? 'Cash';
-    final patientName = appointmentData['patientName'] ?? 'Patient';
+
+    final notes = appointmentData['notes'] ?? '';
+
+    // =========================
+    // PATIENT
+    // =========================
+    final patient = appointmentData['patient'] ?? {};
+
+    final patientName = patient['name'] ?? 'Patient';
+
+    final statusColor = _statusColor(status);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF5F7FA),
+
       appBar: AppBar(
+        elevation: 0,
+
+        centerTitle: true,
+
         title: const Text(
           'Appointment Details',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.teal,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xff39ab4a), Color(0xff009f93)],
+
+              begin: Alignment.bottomRight,
+
+              end: Alignment.topLeft,
+            ),
+          ),
+        ),
       ),
+
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+
         child: Column(
           children: [
-            // ================= STATUS BANNER =================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _getStatusColor(status),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    status.toLowerCase() == 'upcoming'
-                        ? Icons.upcoming
-                        : status.toLowerCase() == 'completed'
-                        ? Icons.check_circle
-                        : Icons.cancel,
-                    size: 64,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    status.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Appointment ID: ${appointmentId.substring(0, 8).toUpperCase()}',
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
+            _buildStatusBanner(status, statusColor),
 
             const SizedBox(height: 16),
 
-            // ================= DOCTOR CARD =================
-            _buildCard(
-              title: 'Doctor Information',
-              icon: Icons.person,
-              child: Column(
-                children: [
-                  // Doctor Avatar
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        doctorName.isNotEmpty
-                            ? doctorName[0].toUpperCase()
-                            : 'D',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    doctorName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    doctorSpecialty,
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            _buildDoctorSection(doctorName, doctorSpecialty),
+
+            _buildAppointmentSection(
+              appointmentDate,
+              appointmentTime,
+              clinicLocation,
             ),
 
-            // ================= APPOINTMENT DETAILS =================
-            _buildCard(
-              title: 'Appointment Details',
-              icon: Icons.calendar_month,
-              child: Column(
-                children: [
-                  _buildDetailRow(
-                    icon: Icons.calendar_today,
-                    label: 'Date',
-                    value: _formatDate(appointmentDate),
-                    color: Colors.teal,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    icon: Icons.access_time,
-                    label: 'Time',
-                    value: _formatTime(appointmentTime),
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    icon: Icons.location_on,
-                    label: 'Location',
-                    value: clinicLocation,
-                    color: Colors.purple,
-                  ),
-                ],
-              ),
-            ),
+            _buildPaymentSection(fees, paymentMethod),
 
-            // ================= PAYMENT DETAILS =================
-            _buildCard(
-              title: 'Payment Information',
-              icon: Icons.payment,
-              child: Column(
-                children: [
-                  _buildDetailRow(
-                    icon: Icons.attach_money,
-                    label: 'Consultation Fee',
-                    value: '\$${fees.toStringAsFixed(2)}',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    icon: paymentMethod.toLowerCase() == 'cash'
-                        ? Icons.money
-                        : Icons.credit_card,
-                    label: 'Payment Method',
-                    value: paymentMethod,
-                    color: paymentMethod.toLowerCase() == 'cash'
-                        ? Colors.green
-                        : Colors.blue,
-                  ),
-                ],
-              ),
-            ),
+            _buildPatientSection(patientName),
 
-            // ================= PATIENT INFO =================
-            _buildCard(
-              title: 'Patient Information',
-              icon: Icons.person_outline,
-              child: _buildDetailRow(
-                icon: Icons.person,
-                label: 'Patient Name',
-                value: patientName,
-                color: Colors.indigo,
-              ),
-            ),
+            if (notes.toString().isNotEmpty) _buildNotesSection(notes),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  // ==================== BUILD CARD ====================
-  Widget _buildCard({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+  // =====================================
+  // STATUS BANNER
+  // =====================================
+  Widget _buildStatusBanner(String status, Color color) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
+
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: color,
+
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: color.withOpacity(0.25),
+
+            blurRadius: 12,
+
+            offset: const Offset(0, 5),
           ),
         ],
       ),
+
+      child: Column(
+        children: [
+          Icon(_statusIcon(status), size: 58, color: Colors.white),
+
+          const SizedBox(height: 10),
+
+          Text(
+            status.toUpperCase(),
+
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+
+              fontSize: 22,
+
+              color: Colors.white,
+
+              letterSpacing: 1.2,
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            'Appointment ID: ${appointmentId.substring(0, 8).toUpperCase()}',
+
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================
+  // DOCTOR SECTION
+  // =====================================
+  Widget _buildDoctorSection(String doctorName, String doctorSpecialty) {
+    return _CustomCard(
+      title: 'Doctor Information',
+
+      icon: Icons.person,
+
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 38,
+
+            backgroundColor: AppColors.primary.withOpacity(0.1),
+
+            child: Text(
+              doctorName.isNotEmpty ? doctorName[0] : 'D',
+
+              style: TextStyle(
+                fontSize: 32,
+
+                fontWeight: FontWeight.bold,
+
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(doctorName, style: AppText.h2, textAlign: TextAlign.center),
+
+          const SizedBox(height: 6),
+
+          Text(
+            doctorSpecialty,
+
+            style: AppText.body,
+
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================
+  // APPOINTMENT SECTION
+  // =====================================
+  Widget _buildAppointmentSection(DateTime date, String time, String location) {
+    return _CustomCard(
+      title: 'Appointment Details',
+
+      icon: Icons.calendar_month_rounded,
+
+      child: Column(
+        children: [
+          _DetailRow(
+            icon: Icons.calendar_today_rounded,
+
+            label: 'Date',
+
+            value: _formatDate(date),
+
+            color: AppColors.primary,
+          ),
+
+          const SizedBox(height: 16),
+
+          _DetailRow(
+            icon: Icons.access_time_rounded,
+
+            label: 'Time',
+
+            value: _formatTime(time),
+
+            color: Colors.orange,
+          ),
+
+          const SizedBox(height: 16),
+
+          _DetailRow(
+            icon: Icons.location_on_rounded,
+
+            label: 'Location',
+
+            value: location,
+
+            color: Colors.purple,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================
+  // PAYMENT SECTION
+  // =====================================
+  Widget _buildPaymentSection(double fees, String paymentMethod) {
+    final isCash = paymentMethod.toLowerCase() == 'cash';
+
+    return _CustomCard(
+      title: 'Payment Information',
+
+      icon: Icons.payment_rounded,
+
+      child: Column(
+        children: [
+          _DetailRow(
+            icon: Icons.monetization_on_rounded,
+
+            label: 'Consultation Fee',
+
+            value: '${fees.toStringAsFixed(0)} EGP',
+
+            color: Colors.green,
+          ),
+
+          const SizedBox(height: 16),
+
+          _DetailRow(
+            icon: isCash ? Icons.money_rounded : Icons.credit_card_rounded,
+
+            label: 'Payment Method',
+
+            value: paymentMethod,
+
+            color: isCash ? Colors.green : Colors.blue,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================
+  // PATIENT SECTION
+  // =====================================
+  Widget _buildPatientSection(String patientName) {
+    return _CustomCard(
+      title: 'Patient Information',
+
+      icon: Icons.person_outline_rounded,
+
+      child: _DetailRow(
+        icon: Icons.person_rounded,
+
+        label: 'Patient Name',
+
+        value: patientName,
+
+        color: Colors.indigo,
+      ),
+    );
+  }
+
+  // =====================================
+  // NOTES SECTION
+  // =====================================
+  Widget _buildNotesSection(String notes) {
+    return _CustomCard(
+      title: 'Notes',
+
+      icon: Icons.notes_rounded,
+
+      child: Text(notes, style: AppText.body),
+    );
+  }
+}
+
+// =========================================
+// CUSTOM CARD
+// =========================================
+class _CustomCard extends StatelessWidget {
+  final String title;
+
+  final IconData icon;
+
+  final Widget child;
+
+  const _CustomCard({
+    required this.title,
+
+    required this.icon,
+
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+
+        borderRadius: BorderRadius.circular(22),
+
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+
+            blurRadius: 10,
+
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+
       child: Padding(
         padding: const EdgeInsets.all(20),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
+
                   decoration: BoxDecoration(
-                    color: Colors.teal.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.primary.withOpacity(0.1),
+
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, size: 20, color: Colors.teal.shade700),
+
+                  child: Icon(icon, color: AppColors.primary, size: 20),
                 ),
+
                 const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+
+                Text(title, style: AppText.h3),
               ],
             ),
+
             const SizedBox(height: 20),
+
             child,
           ],
         ),
       ),
     );
   }
+}
 
-  // ==================== BUILD DETAIL ROW ====================
-  Widget _buildDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
+// =========================================
+// DETAIL ROW
+// =========================================
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+
+  final String label;
+
+  final String value;
+
+  final Color color;
+
+  const _DetailRow({
+    required this.icon,
+
+    required this.label,
+
+    required this.value,
+
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
+
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 24, color: color),
+
+          child: Icon(icon, size: 22, color: color),
         ),
-        const SizedBox(width: 16),
+
+        const SizedBox(width: 14),
+
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(label, style: AppText.caption),
+
               const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
+
+              Text(value, style: AppText.h3.copyWith(fontSize: 15)),
             ],
           ),
         ),

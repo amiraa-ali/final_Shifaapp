@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shifa/Services/firebase_services.dart';
-import 'patient_appointment_card.dart';
-import 'patient_appointment_details_screen.dart';
+
+import 'package:shifa/Services/appointment_service.dart';
+import 'package:shifa/patient_appointment_card.dart';
+import 'package:shifa/patient_appointment_details_screen.dart';
+import 'package:shifa/patient_home_screen.dart';
+import 'package:shifa/app_theme.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
@@ -15,196 +16,356 @@ class MyAppointmentsScreen extends StatefulWidget {
 class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
-  final FirebaseServices _firebaseServices = FirebaseServices();
 
-  static const Color primaryColor = Color(0xFF1ABC9C);
-  static const Color bgColor = Color(0xFFF6F7FB);
+  final AppointmentService _appointmentService = AppointmentService();
+
+  List<dynamic> upcomingAppointments = [];
+
+  List<dynamic> pastAppointments = [];
+
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 2, vsync: this);
+
+    _loadAppointments();
+  }
+
+  // =========================
+  // LOAD APPOINTMENTS
+  // =========================
+  Future<void> _loadAppointments() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final upcoming = await _appointmentService.getPatientAppointments(
+        filter: "upcoming",
+      );
+
+      final past = await _appointmentService.getPatientAppointments(
+        filter: "past",
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        upcomingAppointments = upcoming;
+
+        pastAppointments = past;
+
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+
+      setState(() {
+        isLoading = false;
+      });
+
+      _showSnackBar("Failed to load appointments", isError: true);
+    }
+  }
+
+  // =========================
+  // CANCEL APPOINTMENT
+  // =========================
+  Future<void> _cancelAppointment(String appointmentId) async {
+    try {
+      await _appointmentService.cancelAppointment(appointmentId);
+
+      _showSnackBar("Appointment cancelled");
+
+      _loadAppointments();
+    } catch (e) {
+      _showSnackBar(e.toString(), isError: true);
+    }
+  }
+
+  // =========================
+  // SNACKBAR
+  // =========================
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+
+        backgroundColor: isError ? Colors.red : AppColors.primary,
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+        content: Text(message),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+
     super.dispose();
-  }
-
-  Widget _buildAppointmentList(
-    Stream<QuerySnapshot> stream,
-    String emptyMessage,
-    IconData emptyIcon,
-    String emptySubtitle,
-  ) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: stream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: primaryColor),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState();
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyState(emptyIcon, emptyMessage, emptySubtitle);
-        }
-
-        final appointments = snapshot.data!.docs;
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: appointments.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final appointment = appointments[index];
-            final data = appointment.data() as Map<String, dynamic>;
-
-            return AppointmentCard(
-              appointmentId: appointment.id,
-              doctorName: data['doctorName'] ?? 'Doctor',
-              doctorSpecialty: data['doctorSpecialty'] ?? 'Specialist',
-              appointmentDate: (data['appointmentDate'] as Timestamp).toDate(),
-              appointmentTime: data['appointmentTime'] ?? '',
-              status: data['status'] ?? 'upcoming',
-              fees: (data['fees'] as num?)?.toDouble() ?? 0.0,
-              clinicLocation: data['clinicLocation'] ?? '',
-              paymentMethod: data['paymentMethod'] ?? '',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AppointmentDetailsScreen(
-                      appointmentId: appointment.id,
-                      appointmentData: data,
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState(IconData icon, String title, String subtitle) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 64, color: primaryColor),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.redAccent,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Something went wrong',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please try again later',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color(0xFFF5F7FA),
+
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: primaryColor,
+
+        centerTitle: true,
+
+        backgroundColor: AppColors.primary,
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+
+              MaterialPageRoute(builder: (_) => const PatientHomeScreen()),
+            );
+          },
+        ),
+
         title: const Text(
           'My Appointments',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xff39ab4a), Color(0xff009f93)],
+
+              begin: Alignment.bottomRight,
+
+              end: Alignment.topLeft,
+            ),
           ),
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
-          ],
+        ),
+
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(65),
+
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+
+              borderRadius: BorderRadius.circular(18),
+            ),
+
+            child: TabBar(
+              controller: _tabController,
+
+              dividerColor: Colors.transparent,
+
+              indicator: BoxDecoration(
+                color: Colors.white,
+
+                borderRadius: BorderRadius.circular(14),
+              ),
+
+              indicatorPadding: const EdgeInsets.all(4),
+
+              labelColor: AppColors.primary,
+
+              unselectedLabelColor: Colors.white,
+
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+
+                fontSize: 14,
+              ),
+
+              tabs: const [
+                Tab(text: 'Upcoming'),
+
+                Tab(text: 'Past'),
+              ],
+            ),
+          ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAppointmentList(
-            _firebaseServices.getUpcomingPatientAppointments(currentUserId),
-            'No upcoming appointments',
-            Icons.event_available,
-            'Book your first appointment now',
-          ),
-          _buildAppointmentList(
-            _firebaseServices.getAppointmentHistory(currentUserId),
-            'No past appointments',
-            Icons.history,
-            'Your appointment history will appear here',
-          ),
-        ],
+
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
+          : TabBarView(
+              controller: _tabController,
+
+              children: [
+                _buildAppointmentsList(
+                  appointments: upcomingAppointments,
+
+                  emptyMessage: 'No upcoming appointments',
+
+                  emptySubtitle: 'Book your first appointment now',
+
+                  emptyIcon: Icons.event_available_rounded,
+
+                  showCancel: true,
+                ),
+
+                _buildAppointmentsList(
+                  appointments: pastAppointments,
+
+                  emptyMessage: 'No past appointments',
+
+                  emptySubtitle: 'Your appointment history will appear here',
+
+                  emptyIcon: Icons.history_rounded,
+                ),
+              ],
+            ),
+    );
+  }
+
+  // =========================
+  // APPOINTMENTS LIST
+  // =========================
+  Widget _buildAppointmentsList({
+    required List<dynamic> appointments,
+
+    required String emptyMessage,
+
+    required String emptySubtitle,
+
+    required IconData emptyIcon,
+
+    bool showCancel = false,
+  }) {
+    if (appointments.isEmpty) {
+      return _EmptyState(
+        icon: emptyIcon,
+
+        title: emptyMessage,
+
+        subtitle: emptySubtitle,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadAppointments,
+
+      child: ListView.separated(
+        physics: const BouncingScrollPhysics(),
+
+        padding: const EdgeInsets.all(16),
+
+        itemCount: appointments.length,
+
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+
+        itemBuilder: (context, index) {
+          final appointment = appointments[index];
+
+          return AppointmentCard(
+            appointmentId: appointment["_id"],
+
+            doctorName: appointment["doctor"]?["name"] ?? "Doctor",
+
+            doctorSpecialty:
+                appointment["doctor"]?["specialization"] ?? "Specialist",
+
+            appointmentDate: DateTime.parse(appointment["appointmentDate"]),
+
+            appointmentTime: appointment["appointmentTime"] ?? '',
+
+            status: appointment["status"] ?? 'pending',
+
+            fees: (appointment["doctor"]?["fees"] ?? 0).toDouble(),
+
+            clinicLocation: appointment["doctor"]?["clinicLocation"] ?? '',
+
+            paymentMethod: appointment["paymentMethod"] ?? '',
+
+            onTap: () {
+              Navigator.push(
+                context,
+
+                MaterialPageRoute(
+                  builder: (_) => AppointmentDetailsScreen(
+                    appointmentId: appointment["_id"],
+
+                    appointmentData: appointment,
+                  ),
+                ),
+              );
+            },
+
+            onCancel: showCancel
+                ? () => _cancelAppointment(appointment["_id"])
+                : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+
+  final String title;
+
+  final String subtitle;
+
+  final Color? iconColor;
+
+  const _EmptyState({
+    required this.icon,
+
+    required this.title,
+
+    required this.subtitle,
+
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = iconColor ?? AppColors.primary;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+
+                shape: BoxShape.circle,
+              ),
+
+              child: Icon(icon, size: 60, color: color),
+            ),
+
+            const SizedBox(height: 22),
+
+            Text(title, textAlign: TextAlign.center, style: AppText.h2),
+
+            const SizedBox(height: 10),
+
+            Text(subtitle, textAlign: TextAlign.center, style: AppText.body),
+          ],
+        ),
       ),
     );
   }
