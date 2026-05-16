@@ -3,11 +3,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
 
 class AuthService {
-  final Dio dio = Dio();
+  final Dio dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+
+      receiveTimeout: const Duration(seconds: 30),
+
+      sendTimeout: const Duration(seconds: 30),
+
+      headers: {"Content-Type": "application/json"},
+    ),
+  );
 
   final storage = const FlutterSecureStorage();
 
-  static const baseUrl = "http://10.0.2.2:5000/api";
+  static const baseUrl = "http://192.168.1.16:5000/api";
 
   // =========================
   // LOGIN
@@ -109,10 +119,19 @@ class AuthService {
 
       return response.data;
     } on DioException catch (e) {
-      print("DOCTOR SIGNUP ERROR:");
+      print("BASE URL:");
+      print(baseUrl);
+
+      print("ERROR TYPE:");
+      print(e.type);
+
+      print("ERROR MESSAGE:");
+      print(e.message);
+
+      print("ERROR RESPONSE:");
       print(e.response?.data);
 
-      throw Exception(e.response?.data.toString() ?? "Doctor signup failed");
+      throw Exception("Connection Error");
     }
   }
 

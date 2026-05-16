@@ -51,9 +51,7 @@ const appointmentRoutes =
   require('./routes/appointmentRoutes');
 
 // ✅ NEW CHAT ROUTES
-const chatRoutes =
-  require('./routes/chatRoutes');
-
+const chatRoutes = require('./routes/chatRoutes');
 // =========================
 // CONNECT DATABASE
 // =========================
@@ -274,6 +272,11 @@ app.use(
   chatRoutes
 );
 
+app.use(cors({
+  origin: '*',
+  credentials: true,
+}));
+
 // ======================================================
 // 404
 // ======================================================
@@ -292,7 +295,9 @@ const PORT =
 
 const server = app.listen(
   PORT,
+  '0.0.0.0',
   () => {
+
     console.log(
       `\n🚀 Healthcare API running on port ${PORT}`
     );
@@ -358,6 +363,10 @@ process.on(
       process.exit(0);
     });
   }
+);
+app.use(
+  '/api/chat',
+  chatRoutes
 );
 
 module.exports = app;
