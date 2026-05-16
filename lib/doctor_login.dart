@@ -52,27 +52,20 @@ class _DoctorLoginState extends State<DoctorLogin> {
         password: passwordController.text.trim(),
       );
 
-      final user = response["user"];
+      print("FULL RESPONSE:");
+      print(response);
+
+      final user = response["data"]["user"];
+
       final role = user["role"];
 
       if (!mounted) return;
 
       if (role == "doctor") {
-        AwesomeDialog(
-          context: context,
-          dialogType: DialogType.success,
-          animType: AnimType.bottomSlide,
-          title: "Welcome Doctor 👨‍⚕️",
-          desc: "Login Successful",
-          autoHide: const Duration(seconds: 2),
-          btnOkColor: Colors.teal,
-          onDismissCallback: (_) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
-            );
-          },
-        ).show();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorHomeScreen()),
+        );
       } else if (role == "patient") {
         Navigator.pushReplacement(
           context,
@@ -86,11 +79,14 @@ class _DoctorLoginState extends State<DoctorLogin> {
         );
       }
     } catch (e) {
+      print("LOGIN SCREEN ERROR:");
+      print(e);
+
       if (!mounted) return;
 
       _showDialog(
         title: "Login Failed",
-        message: "Incorrect email or password",
+        message: e.toString(),
         type: DialogType.error,
       );
     } finally {

@@ -17,7 +17,7 @@ class AuthService {
 
   final storage = const FlutterSecureStorage();
 
-  static const baseUrl = "http://192.168.1.16:5000/api";
+  static const baseUrl = "http://192.168.137.1:5000/api";
 
   // =========================
   // LOGIN
@@ -29,12 +29,15 @@ class AuthService {
     try {
       final response = await dio.post(
         "$baseUrl/auth/login",
-
         data: {"email": email, "password": password},
       );
 
       print("LOGIN RESPONSE:");
       print(response.data);
+
+      if (response.data["success"] != true) {
+        throw Exception("Login failed");
+      }
 
       final token = response.data["data"]["token"];
 
@@ -45,7 +48,7 @@ class AuthService {
       print("LOGIN ERROR:");
       print(e.response?.data);
 
-      throw Exception(e.response?.data["message"] ?? "Login failed");
+      throw Exception(e.response?.data?["message"] ?? "Connection Error");
     }
   }
 
