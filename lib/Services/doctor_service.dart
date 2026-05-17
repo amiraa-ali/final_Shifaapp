@@ -12,42 +12,57 @@ class DoctorService {
     try {
       final response = await dio.get("$baseUrl/doctors");
 
-      return response.data["doctors"] ?? [];
+      return response.data["data"] ?? [];
     } on DioException catch (e) {
-      throw Exception(e.response?.data["message"] ?? "Failed to load doctors");
+      throw Exception(
+        e.response?.data["message"] ?? "Failed to load doctors",
+      );
     }
   }
 
   // =========================
   // GET DOCTOR DETAILS
   // =========================
-  Future<Map<String, dynamic>> getDoctorById(String doctorId) async {
+  Future<Map<String, dynamic>> getDoctorById(
+    String doctorId,
+  ) async {
     try {
-      final response = await dio.get("$baseUrl/doctors/$doctorId");
+      final response = await dio.get(
+        "$baseUrl/doctors/$doctorId",
+      );
 
-      return response.data["doctor"];
+      return response.data["data"];
     } on DioException catch (e) {
-      throw Exception(e.response?.data["message"] ?? "Failed to load doctor");
+      throw Exception(
+        e.response?.data["message"] ?? "Failed to load doctor",
+      );
     }
   }
 
   // =========================
   // SEARCH DOCTORS
   // =========================
-  Future<List<dynamic>> searchDoctors(String query) async {
+  Future<List<dynamic>> searchDoctors(
+    String query,
+  ) async {
     try {
-      final response = await dio.get("$baseUrl/doctors/search?q=$query");
+      final response = await dio.get(
+        "$baseUrl/doctors/search?q=$query",
+      );
 
-      return response.data["doctors"] ?? [];
+      return response.data["data"] ?? [];
     } on DioException catch (e) {
-      throw Exception(e.response?.data["message"] ?? "Search failed");
+      throw Exception(
+        e.response?.data["message"] ?? "Search failed",
+      );
     }
   }
 
   // =========================
   // FILTER BY SPECIALIZATION
   // =========================
-  Future<List<dynamic>> getDoctorsBySpecialization(
+  Future<List<dynamic>>
+      getDoctorsBySpecialization(
     String specialization,
   ) async {
     try {
@@ -55,9 +70,12 @@ class DoctorService {
         "$baseUrl/doctors/specialization/$specialization",
       );
 
-      return response.data["doctors"] ?? [];
+      return response.data["data"] ?? [];
     } on DioException catch (e) {
-      throw Exception(e.response?.data["message"] ?? "Failed to load doctors");
+      throw Exception(
+        e.response?.data["message"] ??
+            "Failed to load doctors",
+      );
     }
   }
 }

@@ -65,31 +65,39 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   // =========================
   // LOAD DATA
   // =========================
-  Future<void> _loadData() async {
-    try {
-      final doctorsResult = await _doctorService.getDoctors();
+ Future<void> _loadData() async {
+  try {
+    print("START HOME");
 
-      final profile = await _authService.getPatientProfile();
+    final doctorsResult = await _doctorService.getDoctors();
 
-      if (!mounted) return;
+    print("DOCTORS LOADED");
 
-      setState(() {
-        doctors = doctorsResult;
+    final profile = await _authService.getPatientProfile();
 
-        userName = profile['name'] ?? 'Patient';
+    print("PROFILE LOADED");
 
-        isLoading = false;
-      });
-    } catch (e) {
-      debugPrint(e.toString());
+    print(profile);
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        isLoading = false;
-      });
-    }
+    setState(() {
+      doctors = doctorsResult;
+
+      userName = profile['name'] ?? 'Patient';
+
+      isLoading = false;
+    });
+  } catch (e) {
+    print("HOME ERROR = $e");
+
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {

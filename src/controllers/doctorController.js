@@ -76,34 +76,117 @@ const getDoctorById = asyncHandler(async (req, res) => {
  * @access  Private (Doctor only)
  */
 const updateDoctorProfile = asyncHandler(async (req, res) => {
-  const { name, specialization, fees, about, clinicLocation, university, availability } = req.body;
 
-  // Update user name if provided
-  if (name) {
-    await User.findByIdAndUpdate(req.user.id, { name });
+  const {
+
+    name,
+    phone,
+    specialization,
+    fees,
+    about,
+    clinicLocation,
+    university,
+    certificate,
+    imageUrl,
+    availability,
+
+  } = req.body;
+
+  // =========================
+  // UPDATE USER
+  // =========================
+
+  const userUpdates = {};
+
+  if (name !== undefined)
+    userUpdates.name = name;
+
+  if (phone !== undefined)
+    userUpdates.phone = phone;
+
+  if (imageUrl !== undefined)
+    userUpdates.profileImage = imageUrl;
+
+  if (Object.keys(userUpdates).length > 0) {
+
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: userUpdates },
+      { new: true },
+    );
   }
 
-  const updateFields = {};
-  if (specialization !== undefined) updateFields.specialization = specialization;
-  if (fees !== undefined) updateFields.fees = fees;
-  if (about !== undefined) updateFields.about = about;
-  if (clinicLocation !== undefined) updateFields.clinicLocation = clinicLocation;
-  if (university !== undefined) updateFields.university = university;
-  if (availability !== undefined) updateFields.availability = availability;
+  // =========================
+  // UPDATE DOCTOR
+  // =========================
 
-  const doctor = await Doctor.findOneAndUpdate(
+  const updateFields = {};
+
+  if (specialization !== undefined)
+    updateFields.specialization =
+        specialization;
+
+  if (fees !== undefined)
+    updateFields.fees = fees;
+
+  if (about !== undefined)
+    updateFields.about = about;
+
+  if (clinicLocation !== undefined)
+    updateFields.clinicLocation =
+        clinicLocation;
+
+  if (university !== undefined)
+    updateFields.university =
+        university;
+
+  if (certificate !== undefined)
+    updateFields.certificate =
+        certificate;
+
+  if (availability !== undefined)
+    updateFields.availability =
+        availability;
+
+  if (imageUrl !== undefined)
+    updateFields.imageUrl =
+        imageUrl;
+
+  const doctor =
+      await Doctor.findOneAndUpdate(
+
     { userId: req.user.id },
+
     { $set: updateFields },
-    { new: true, runValidators: true }
-  ).populate('userId', 'name email profileImage');
+
+    {
+      new: true,
+      runValidators: true,
+    },
+
+  ).populate(
+    'userId',
+    'name email profileImage',
+  );
 
   if (!doctor) {
-    return res.status(404).json({ success: false, message: 'Doctor profile not found' });
+
+    return res.status(404).json({
+
+      success: false,
+
+      message:
+          'Doctor profile not found',
+    });
   }
 
   res.status(200).json({
+
     success: true,
-    message: 'Profile updated successfully',
+
+    message:
+        'Profile updated successfully',
+
     data: doctor,
   });
 });
@@ -218,6 +301,34 @@ const updatePatientMedicalConditions = asyncHandler(async (req, res) => {
     data: patient,
   });
 });
+const getDoctorProfile = async (req, res) => {
+  try {
+
+    const doctor = await Doctor.findOne({
+      userId: req.user._id,
+    }).populate('userId');
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: doctor,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+};
 
 module.exports = {
   getAllDoctors,
@@ -227,4 +338,5 @@ module.exports = {
   getCompletedAppointments,
   getTotalPatients,
   updatePatientMedicalConditions,
+  getDoctorProfile, // ✅ ضيفي دي
 };

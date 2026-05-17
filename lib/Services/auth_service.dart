@@ -1,71 +1,113 @@
-import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
 
+import 'package:dio/dio.dart' as dio;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+// import 'package:supabase_flutter/supabase_flutter.dart';
+
 class AuthService {
-  final Dio dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 30),
 
-      receiveTimeout: const Duration(seconds: 30),
+  final dio.Dio dioClient = dio.Dio(
 
-      sendTimeout: const Duration(seconds: 30),
+    dio.BaseOptions(
 
-      headers: {"Content-Type": "application/json"},
+      connectTimeout:
+          const Duration(seconds: 30),
+
+      receiveTimeout:
+          const Duration(seconds: 30),
+
+      sendTimeout:
+          const Duration(seconds: 30),
+
+      headers: {
+        "Content-Type":
+            "application/json",
+      },
     ),
   );
 
-  final storage = const FlutterSecureStorage();
+  final storage =
+      const FlutterSecureStorage();
 
-  static const baseUrl = "http://192.168.137.1:5000/api";
+
+  static const baseUrl =
+      "http://192.168.1.11:5000/api";
 
   // =========================
   // LOGIN
   // =========================
   Future<Map<String, dynamic>> login({
+
     required String email,
     required String password,
+
   }) async {
+
     try {
-      final response = await dio.post(
+
+      final response =
+          await dioClient.post(
+
         "$baseUrl/auth/login",
-        data: {"email": email, "password": password},
+
+        data: {
+
+          "email": email,
+          "password": password,
+        },
       );
 
-      print("LOGIN RESPONSE:");
-      print(response.data);
+      if (response.data["success"]
+          != true) {
 
-      if (response.data["success"] != true) {
-        throw Exception("Login failed");
+        throw Exception(
+          "Login failed",
+        );
       }
 
-      final token = response.data["data"]["token"];
+      final token =
+          response.data["data"]["token"];
 
-      await storage.write(key: "token", value: token);
+      await storage.write(
+
+        key: "token",
+        value: token,
+      );
 
       return response.data;
-    } on DioException catch (e) {
-      print("LOGIN ERROR:");
-      print(e.response?.data);
 
-      throw Exception(e.response?.data?["message"] ?? "Connection Error");
+    } on dio.DioException catch (e) {
+
+      throw Exception(
+
+        e.response?.data?["message"] ??
+            "Connection Error",
+      );
     }
   }
 
   // =========================
   // PATIENT SIGNUP
   // =========================
-  Future<Map<String, dynamic>> patientSignup({
+  Future<Map<String, dynamic>>
+      patientSignup({
+
     required String name,
     required String email,
     required String phone,
     required String password,
+
   }) async {
+
     try {
-      final response = await dio.post(
+
+      final response =
+          await dioClient.post(
+
         "$baseUrl/auth/register",
 
         data: {
+
           "name": name,
           "email": email,
           "password": password,
@@ -73,26 +115,33 @@ class AuthService {
         },
       );
 
-      print("PATIENT SIGNUP RESPONSE:");
-      print(response.data);
+      final token =
+          response.data["data"]["token"];
 
-      final token = response.data["data"]["token"];
+      await storage.write(
 
-      await storage.write(key: "token", value: token);
+        key: "token",
+        value: token,
+      );
 
       return response.data;
-    } on DioException catch (e) {
-      print("PATIENT SIGNUP ERROR:");
-      print(e.response?.data);
 
-      throw Exception(e.response?.data.toString() ?? "Patient signup failed");
+    } on dio.DioException catch (e) {
+
+      throw Exception(
+
+        e.response?.data.toString() ??
+            "Patient signup failed",
+      );
     }
   }
 
   // =========================
   // DOCTOR SIGNUP
   // =========================
-  Future<Map<String, dynamic>> doctorSignup({
+  Future<Map<String, dynamic>>
+      doctorSignup({
+
     required String name,
     required String email,
     required String password,
@@ -100,12 +149,18 @@ class AuthService {
     required String specialization,
     required String clinicLocation,
     required String fees,
+
   }) async {
+
     try {
-      final response = await dio.post(
+
+      final response =
+          await dioClient.post(
+
         "$baseUrl/auth/register",
 
         data: {
+
           "name": name,
           "email": email,
           "password": password,
@@ -113,28 +168,24 @@ class AuthService {
         },
       );
 
-      print("DOCTOR SIGNUP RESPONSE:");
-      print(response.data);
+      final token =
+          response.data["data"]["token"];
 
-      final token = response.data["data"]["token"];
+      await storage.write(
 
-      await storage.write(key: "token", value: token);
+        key: "token",
+        value: token,
+      );
 
       return response.data;
-    } on DioException catch (e) {
-      print("BASE URL:");
-      print(baseUrl);
 
-      print("ERROR TYPE:");
-      print(e.type);
+    } on dio.DioException catch (e) {
 
-      print("ERROR MESSAGE:");
-      print(e.message);
+      throw Exception(
 
-      print("ERROR RESPONSE:");
-      print(e.response?.data);
-
-      throw Exception("Connection Error");
+        e.response?.data.toString() ??
+            "Doctor signup failed",
+      );
     }
   }
 
@@ -142,93 +193,56 @@ class AuthService {
   // GET TOKEN
   // =========================
   Future<String?> getToken() async {
-    return await storage.read(key: "token");
+
+    return await storage.read(
+      key: "token",
+    );
   }
 
   // =========================
   // LOGOUT
   // =========================
   Future<void> logout() async {
-    await storage.delete(key: "token");
-  }
 
-  // =========================
-  // GET PATIENT PROFILE
-  // =========================
-  Future<Map<String, dynamic>> getPatientProfile() async {
-    try {
-      final token = await getToken();
-
-      final response = await dio.get(
-        "$baseUrl/patients/profile",
-
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      return response.data;
-    } on DioException catch (e) {
-      print(e.response?.data);
-
-      throw Exception(
-        e.response?.data["message"] ?? "Failed to load patient profile",
-      );
-    }
-  }
-
-  // =========================
-  // UPDATE PATIENT PROFILE
-  // =========================
-  Future<Map<String, dynamic>> updatePatientProfile({
-    required String name,
-    required String phone,
-    required String location,
-    required String dateOfBirth,
-  }) async {
-    try {
-      final token = await getToken();
-
-      final response = await dio.put(
-        "$baseUrl/patients/profile",
-
-        data: {
-          "name": name,
-          "phone": phone,
-          "location": location,
-          "dateOfBirth": dateOfBirth,
-        },
-
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      return response.data;
-    } on DioException catch (e) {
-      print(e.response?.data);
-
-      throw Exception(
-        e.response?.data["message"] ?? "Failed to update patient profile",
-      );
-    }
+    await storage.delete(
+      key: "token",
+    );
   }
 
   // =========================
   // GET DOCTOR PROFILE
   // =========================
-  Future<Map<String, dynamic>> getDoctorProfile() async {
-    try {
-      final token = await getToken();
+  Future<Map<String, dynamic>>
+      getDoctorProfile() async {
 
-      final response = await dio.get(
+    try {
+
+      final token =
+          await getToken();
+
+      final response =
+          await dioClient.get(
+
         "$baseUrl/doctors/profile",
 
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        options: dio.Options(
+
+          headers: {
+
+            "Authorization":
+                "Bearer $token",
+          },
+        ),
       );
 
       return response.data;
-    } on DioException catch (e) {
-      print(e.response?.data);
+
+    } on dio.DioException catch (e) {
 
       throw Exception(
-        e.response?.data["message"] ?? "Failed to load doctor profile",
+
+        e.response?.data?["message"] ??
+            "Failed to load doctor profile",
       );
     }
   }
@@ -236,7 +250,9 @@ class AuthService {
   // =========================
   // UPDATE DOCTOR PROFILE
   // =========================
-  Future<Map<String, dynamic>> updateDoctorProfile({
+  Future<Map<String, dynamic>>
+      updateDoctorProfile({
+
     required String phone,
     required String location,
     required String specialization,
@@ -244,109 +260,249 @@ class AuthService {
     required String certificate,
     required String about,
     required String fees,
-  }) async {
-    try {
-      final token = await getToken();
 
-      final response = await dio.put(
+    String? imageUrl,
+
+  }) async {
+
+    try {
+
+      final token =
+          await getToken();
+
+      final Map<String, dynamic>
+          data = {
+
+        "phone": phone,
+
+        "clinicLocation":
+            location,
+
+        "specialization":
+            specialization,
+
+        "university":
+            university,
+
+        "certificate":
+            certificate,
+
+        "about": about,
+
+        "fees":
+            int.tryParse(fees) ?? 0,
+      };
+
+      if (imageUrl != null &&
+          imageUrl.isNotEmpty) {
+
+        data["imageUrl"] =
+            imageUrl;
+      }
+
+      final response =
+          await dioClient.put(
+
         "$baseUrl/doctors/profile",
 
-        data: {
-          "phone": phone,
-          "clinicLocation": location,
-          "specialization": specialization,
-          "university": university,
-          "certificate": certificate,
-          "about": about,
-          "fees": fees,
-        },
+        data: data,
 
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        options: dio.Options(
+
+          headers: {
+
+            "Authorization":
+                "Bearer $token",
+          },
+        ),
       );
 
       return response.data;
-    } on DioException catch (e) {
-      print(e.response?.data);
+
+    } on dio.DioException catch (e) {
 
       throw Exception(
-        e.response?.data["message"] ?? "Failed to update doctor profile",
+
+        e.response?.data?["message"] ??
+            "Failed to update doctor profile",
       );
     }
   }
 
   // =========================
-  // UPLOAD DOCTOR IMAGE
+// UPLOAD DOCTOR IMAGE
+// =========================
+Future<String> uploadDoctorImage(
+  File imageFile,
+) async {
+
+  try {
+
+    final token = await getToken();
+
+    String fileName =
+        imageFile.path
+            .split('/')
+            .last;
+
+    dio.FormData formData =
+        dio.FormData.fromMap({
+
+      "image":
+          await dio.MultipartFile
+              .fromFile(
+
+        imageFile.path,
+
+        filename: fileName,
+      ),
+    });
+
+    final response =
+        await dioClient.post(
+
+      "$baseUrl/doctors/upload-image",
+
+      data: formData,
+
+      options: dio.Options(
+
+        headers: {
+
+          "Authorization":
+              "Bearer $token",
+
+          "Content-Type":
+              "multipart/form-data",
+        },
+      ),
+    );
+
+    print("UPLOAD RESPONSE:");
+    print(response.data);
+
+    // =========================
+    // مهم جداً
+    // =========================
+
+    if (response.data["imageUrl"] != null) {
+
+      return response.data["imageUrl"];
+    }
+
+    if (response.data["data"] != null &&
+        response.data["data"]["imageUrl"] != null) {
+
+      return response.data["data"]["imageUrl"];
+    }
+
+    throw Exception(
+      "Image url not returned from backend",
+    );
+
+  } on dio.DioException catch (e) {
+
+    throw Exception(
+
+      e.response?.data?["message"] ??
+          "Image upload failed",
+    );
+  }
+}
   // =========================
-  Future<String> uploadDoctorImage(File imageFile) async {
+  // GET PATIENT PROFILE
+  // =========================
+  Future<Map<String, dynamic>>
+      getPatientProfile() async {
+
     try {
-      final token = await getToken();
 
-      String fileName = imageFile.path.split('/').last;
+      final token =
+          await getToken();
 
-      FormData formData = FormData.fromMap({
-        "image": await MultipartFile.fromFile(
-          imageFile.path,
-          filename: fileName,
-        ),
-      });
+      final response =
+          await dioClient.get(
 
-      final response = await dio.post(
-        "$baseUrl/doctors/upload-image",
+        "$baseUrl/patients/profile",
 
-        data: formData,
+        options: dio.Options(
 
-        options: Options(
           headers: {
-            "Authorization": "Bearer $token",
 
-            "Content-Type": "multipart/form-data",
+            "Authorization":
+                "Bearer $token",
           },
         ),
       );
 
-      return response.data["imageUrl"] ?? '';
-    } on DioException catch (e) {
-      print(e.response?.data);
+      return response.data;
 
-      throw Exception(e.response?.data["message"] ?? "Image upload failed");
+    } on dio.DioException catch (e) {
+
+      throw Exception(
+
+        e.response?.data?["message"] ??
+            "Failed to load patient profile",
+      );
+    }
+  }
+
+  // =========================
+  // UPDATE PATIENT PROFILE
+  // =========================
+  Future<Map<String, dynamic>>
+      updatePatientProfile({
+
+    required String name,
+    required String phone,
+    required String location,
+    required String dateOfBirth,
+
+  }) async {
+
+    try {
+
+      final token =
+          await getToken();
+
+      final response =
+          await dioClient.put(
+
+        "$baseUrl/patients/profile",
+
+        data: {
+
+          "name": name,
+          "phone": phone,
+          "location": location,
+          "dateOfBirth":
+              dateOfBirth,
+        },
+
+        options: dio.Options(
+
+          headers: {
+
+            "Authorization":
+                "Bearer $token",
+          },
+        ),
+      );
+
+      return response.data;
+
+    } on dio.DioException catch (e) {
+
+      throw Exception(
+
+        e.response?.data?["message"] ??
+            "Failed to update patient profile",
+      );
     }
   }
 
   // =========================
   // UPLOAD PATIENT IMAGE
   // =========================
-  Future<String> uploadPatientImage(File imageFile) async {
-    try {
-      final token = await getToken();
-
-      String fileName = imageFile.path.split('/').last;
-
-      FormData formData = FormData.fromMap({
-        "image": await MultipartFile.fromFile(
-          imageFile.path,
-          filename: fileName,
-        ),
-      });
-
-      final response = await dio.post(
-        "$baseUrl/patients/upload-image",
-
-        data: formData,
-
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-
-            "Content-Type": "multipart/form-data",
-          },
-        ),
-      );
-
-      return response.data["imageUrl"] ?? '';
-    } on DioException catch (e) {
-      print(e.response?.data);
-
-      throw Exception(e.response?.data["message"] ?? "Image upload failed");
-    }
-  }
+  
 }

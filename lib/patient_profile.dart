@@ -113,7 +113,10 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
         isUploadingImage = true;
       });
 
-      final imageUrl = await _authService.uploadPatientImage(File(image.path));
+      final imageUrl =
+    await _authService.uploadDoctorImage(
+      File(image.path),
+    );
 
       setState(() {
         profileImageUrl = imageUrl;

@@ -48,28 +48,63 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   // =========================
   // LOAD DATA
   // =========================
-  Future<void> _loadData() async {
-    try {
+ Future<void> _loadData() async {
+
+  print("START");
+
+  // =========================
+  // LOAD PROFILE FIRST
+  // =========================
+
+  try {
+
+    final profile =
+        await _authService.getDoctorProfile();
+
+    print("PROFILE:");
+    print(profile);
+
+    if (mounted) {
+
       setState(() {
-        isLoading = true;
+
+        doctorName =
+            profile['data']?['userId']?['name']
+            ?? 'Doctor';
+
+        specialty =
+            profile['data']?['specialization']
+            ?? 'General';
       });
+    }
 
-      // PROFILE
-      final profile = await _authService.getDoctorProfile();
+  } catch (e) {
 
-      // APPOINTMENTS
-      final today = await _appointmentService.getTodayAppointments();
+    print("PROFILE ERROR:");
+    print(e);
+  }
 
-      final upcoming = await _appointmentService.getUpcomingAppointments();
+  // =========================
+  // LOAD APPOINTMENTS
+  // =========================
 
-      final completed = await _appointmentService.getCompletedAppointments();
+  try {
 
-      if (!mounted) return;
+    final today =
+        await _appointmentService
+            .getTodayAppointments();
+
+    final upcoming =
+        await _appointmentService
+            .getUpcomingAppointments();
+
+    final completed =
+        await _appointmentService
+            .getCompletedAppointments();
+
+    if (mounted) {
 
       setState(() {
-        doctorName = profile['name'] ?? 'Doctor';
-
-        specialty = profile['specialization'] ?? 'General';
 
         todayAppointments = today;
 
@@ -81,21 +116,31 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
         monthlyRevenue = completed.fold(
           0.0,
-          (sum, item) => sum + ((item['fees'] ?? 0).toDouble()),
+          (sum, item) =>
+              sum +
+              ((item['fees'] ?? 0).toDouble()),
         );
-
-        isLoading = false;
-      });
-    } catch (e) {
-      debugPrint(e.toString());
-
-      if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
       });
     }
+
+  } catch (e) {
+
+    print("APPOINTMENT ERROR:");
+    print(e);
   }
+
+  // =========================
+  // FINISH LOADING
+  // =========================
+
+  if (mounted) {
+
+    setState(() {
+
+      isLoading = false;
+    });
+  }
+}
 
   List<Widget> get pages => [
     _buildDashboard(),
@@ -180,11 +225,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
         onRefresh: _loadData,
 
-        child: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
-            : SingleChildScrollView(
+        child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
 
                 child: Column(
@@ -274,38 +315,48 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
           ),
 
-          Hero(
-            tag: 'doctor-profile',
+        GestureDetector(
+  onTap: () {
 
-            child: Container(
-              width: 60,
-              height: 60,
+    setState(() {
 
-              decoration: BoxDecoration(
-                color: Colors.white,
+      index = 3;
+    });
+  },
 
-                shape: BoxShape.circle,
-              ),
+  child: Hero(
+    tag: 'doctor-profile',
 
-              child: Center(
-                child: Text(
-                  doctorName
-                      .split(' ')
-                      .map((e) => e.isNotEmpty ? e[0] : '')
-                      .take(2)
-                      .join(),
+    child: Container(
+      width: 60,
+      height: 60,
 
-                  style: const TextStyle(
-                    color: AppColors.primary,
+      decoration: BoxDecoration(
+        color: Colors.white,
 
-                    fontWeight: FontWeight.bold,
+        shape: BoxShape.circle,
+      ),
 
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
+      child: Center(
+        child: Text(
+          doctorName
+              .split(' ')
+              .map((e) => e.isNotEmpty ? e[0] : '')
+              .take(2)
+              .join(),
+
+          style: const TextStyle(
+            color: AppColors.primary,
+
+            fontWeight: FontWeight.bold,
+
+            fontSize: 20,
           ),
+        ),
+      ),
+    ),
+  ),
+),
         ],
       ),
     );

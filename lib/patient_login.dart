@@ -51,14 +51,16 @@ class _PatientLoginState extends State<PatientLogin> {
     });
 
     try {
-      final response = await _authService.login(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+    final response = await _authService.login(
+  email: emailController.text.trim(),
+  password: passwordController.text.trim(),
+);
 
-      final user = response["user"];
+print(response);
 
-      final role = user["role"];
+final user = response["data"]["user"];
+
+final role = user["role"];
 
       if (!mounted) return;
 

@@ -68,128 +68,123 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
     );
   }
 
-  PreferredSizeWidget _buildCustomAppBar(BuildContext context) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(150),
+PreferredSizeWidget _buildCustomAppBar(BuildContext context) {
+  return PreferredSize(
+    preferredSize: const Size.fromHeight(165),
 
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xff39ab4a), Color(0xff009f93)],
-
-            end: Alignment.topLeft,
-            begin: Alignment.bottomRight,
-          ),
-
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
+    child: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xff39ab4a), Color(0xff009f93)],
+          end: Alignment.topLeft,
+          begin: Alignment.bottomRight,
         ),
 
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.white,
-                      ),
-
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DoctorHomeScreen(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: const [
-                        Text(
-                          'Appointments',
-
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
-
-                        SizedBox(height: 4),
-
-                        Text(
-                          'Manage your appointments',
-
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(),
-
-              Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-
-                  borderRadius: BorderRadius.circular(18),
-                ),
-
-                child: const TabBar(
-                  dividerColor: Colors.transparent,
-
-                  indicatorSize: TabBarIndicatorSize.tab,
-
-                  indicator: BoxDecoration(
-                    color: Colors.white,
-
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
-                  ),
-
-                  indicatorPadding: EdgeInsets.all(4),
-
-                  labelColor: Color(0xff009f93),
-
-                  unselectedLabelColor: Colors.white,
-
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold),
-
-                  tabs: [
-                    Tab(text: 'Today'),
-                    Tab(text: 'Upcoming'),
-                    Tab(text: 'Completed'),
-                    Tab(text: 'Cancelled'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
       ),
-    );
-  }
+
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                    ),
+
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DoctorHomeScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: const [
+                      Text(
+                        'Appointments',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+
+                      SizedBox(height: 2),
+
+                      Text(
+                        'Manage your appointments',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(18),
+              ),
+
+              child: const TabBar(
+                dividerColor: Colors.transparent,
+
+                indicatorSize: TabBarIndicatorSize.tab,
+
+                indicator: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                ),
+
+                indicatorPadding: EdgeInsets.all(4),
+
+                labelColor: Color(0xff009f93),
+
+                unselectedLabelColor: Colors.white,
+
+                labelStyle: TextStyle(fontWeight: FontWeight.bold),
+
+                tabs: [
+                  Tab(text: 'Today'),
+                  Tab(text: 'Upcoming'),
+                  Tab(text: 'Completed'),
+                  Tab(text: 'Cancelled'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _buildAppointmentList(Future<List<dynamic>> future, String tabType) {
     return FutureBuilder<List<dynamic>>(
